@@ -8,6 +8,7 @@ supported by the `neo4j-graphrag` package:
 
 - [Automatic Schema Extraction](#schema-extraction) from PDF or text
 - [Build Knowledge Graph](#build-knowledge-graph) from PDF or text
+- [Dataflow pipeline](#dataflow-pipeline): minimal examples of the new pipeline
 - [Retrieve](#retrieve) information from the graph
 - [Question Answering](#answer-graphrag) (Q&A)
 
@@ -21,6 +22,14 @@ are listed in [the last section of this file](#customize).
 - [Build KG pipeline from config file](build_graph/from_config_files/simple_kg_pipeline_from_config_file.py)
 - [Build KG pipeline with PDF URL](build_graph/from_config_files/simple_kg_pipeline_from_config_file_with_url.py)
 
+
+## Dataflow pipeline
+
+Minimal examples of the new `neo4j_graphrag.pipeline.Pipeline` (not the
+experimental component-graph pipeline used by `SimpleKGPipeline`). See also the
+[pipeline observability notebook](pipeline_observability.ipynb).
+
+- [Source, stages and sink](pipeline/01_basic_pipeline.py)
 
 ## Retrieve
 
