@@ -6,6 +6,10 @@ Text goes through three independent, swappable stages:
 
 * The splitter is the real `FixedSizeSplitter`, used through its synchronous
   `iter_chunks` method with `flat_map` (one text -> many chunks).
+* Components are not callable and their `run` methods are `async`, so they
+  cannot be given to `map` as they are (you would get unawaited coroutines).
+  Use a synchronous helper with `map`/`flat_map`, or `map_async_chunked` for
+  `run` (see the second pipeline below).
 * The extractor is a small stand-in so the example runs offline. To use an LLM,
   swap in `LLMEntityRelationExtractor` (see the commented snippet below): the
   rest of the pipeline does not change.
@@ -97,3 +101,18 @@ def build_sink() -> Sink[Neo4jGraph]:
     .map(merge_graphs, label="merge")
     .to_sink(build_sink(), label="write")
 )
+
+# The same first stage, using the component's async `run` method instead.
+# `run` returns a `TextChunks` model, so unwrap it with `flat_map`. Components
+# whose `run` takes more than one argument (like the extractor) need a small
+# wrapper, as in `extract_entities_llm` above.
+#
+# NB: async stages are evaluated with `asyncio.run`, so they cannot be used from
+# inside a running event loop (a notebook, or an `async def main()`).
+chunks = (
+    Pipeline([TEXT])
+    .map_async_chunked(splitter.run, map_batch_size=10, label="split")
+    .flat_map(lambda text_chunks: text_chunks.chunks, label="unwrap")
+    .collect()
+)
+print(f"{len(chunks)} chunks via the async `run` method")
