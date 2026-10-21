@@ -11,6 +11,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
+# Fail fast if uv.lock is out of sync with pyproject.toml, instead of silently
+# installing a stale lock (--frozen) or re-resolving on the fly.
+env:
+  UV_LOCKED: "1"
+
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
@@ -104,7 +109,7 @@ jobs:
       # be trusted, and the failure surfaces much later as an ImportError inside
       # a test. uv sync is quick when the environment is already correct.
       - name: Install dependencies
-        run: uv sync --frozen --all-extras --no-extra gpu --group dev
+        run: uv sync --all-extras --no-extra gpu --group dev
       - name: Save cached venv
         if: steps.cached-venv.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -139,11 +144,11 @@ jobs:
         shell: bash
         run: |
           if [[ "${{ matrix.neo4j-tag }}" == "latest" || "${{ matrix.neo4j-tag }}" == "community" ]]; then
-              uv run --frozen pytest -m 'not enterprise_only' ./tests/e2e
+              uv run pytest -m 'not enterprise_only' ./tests/e2e
           elif [[ "${{ matrix.neo4j-tag }}" == "5-enterprise" ]]; then
-              uv run --frozen pytest -m 'not search_clause' ./tests/e2e
+              uv run pytest -m 'not search_clause' ./tests/e2e
           else
-              uv run --frozen pytest ./tests/e2e
+              uv run pytest ./tests/e2e
           fi
       - name: Prune uv cache
         if: always()
