@@ -305,16 +305,22 @@ def get_existence_constraints_for_relationship_type(
 def enrich_key_constraints_for_node_type(
     schema: Optional[GraphSchema], node_label: str
 ) -> list[tuple[str, ...]]:
-    """KEY constraint groups for export metadata, ensuring a single-property KEY exists.
+    """KEY constraint groups for export metadata.
 
-    If the schema has no single-property KEY for this label (including no KEY at all,
-    or only composite KEYs), appends a synthetic ``("__id__",)`` group so downstream
-    import specs always see at least one single-property KEY per node type.
+    When the schema already declares any KEY for this label (single-property or
+    composite), return those groups unchanged. Only when there is **no** KEY at
+    all, append a synthetic ``("__id__",)`` group so keyless labels still have
+    one KEY for downstream import specs.
+
+    Relationship ``from``/``to`` joins still use
+    :func:`get_relationship_join_key_property_name` (first single-property KEY,
+    else ``__id__`` as a normal column). That does not require a KEY constraint
+    on ``__id__`` when a semantic KEY already exists.
     """
     base = get_key_constraints_for_node_type(schema, node_label)
-    if _first_single_property_key_name_from_groups(base) is not None:
+    if base:
         return base
-    return [*base, (INTERNAL_ID_PROPERTY,)]
+    return [(INTERNAL_ID_PROPERTY,)]
 
 
 def flatten_key_constraint_property_names(
@@ -334,9 +340,10 @@ def get_relationship_join_key_property_name(
 
     Returns the first **single-property** KEY from the schema for this label; if none,
     returns ``__id__`` (internal node id in row values). Independent of
-    :func:`enrich_key_constraints_for_node_type` ordering, but aligned with it:
-    when the schema has no single-property KEY, the join key is ``__id__`` and
-    enrichment adds a KEY on ``__id__``.
+    :func:`enrich_key_constraints_for_node_type`: when the schema has no
+    single-property KEY (including composite-only), joins still use ``__id__``
+    as a column, but enrichment only adds ``KEY(__id__)`` when there is no
+    semantic KEY at all.
     """
     base = get_key_constraints_for_node_type(schema, node_label)
     name = _first_single_property_key_name_from_groups(base)
