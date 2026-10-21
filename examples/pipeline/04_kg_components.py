@@ -49,20 +49,24 @@ def extract_entities(chunk: TextChunk) -> Neo4jGraph:
     )
 
 
-# With an LLM, use the real component instead (needs an API key):
+# With an LLM, use the real component instead (needs an API key). Its async `run`
+# takes the chunks produced by `splitter.run` (a `TextChunks`) and any extra
+# argument can be bound with `functools.partial`:
+#
+#     from functools import partial
 #
 #     from neo4j_graphrag.components.entity_relation_extractor import (
 #         LLMEntityRelationExtractor,
 #     )
-#     from neo4j_graphrag.components.types import TextChunks
 #     from neo4j_graphrag.llm import OpenAILLM
 #
 #     extractor = LLMEntityRelationExtractor(llm=OpenAILLM(model_name="gpt-4o"))
-#
-#     async def extract_entities_llm(chunk: TextChunk) -> Neo4jGraph:
-#         return await extractor.run(TextChunks(chunks=[chunk]))
-#
-# then use `.map_async_chunked(extract_entities_llm, map_batch_size=5)` below.
+#     (
+#         Pipeline([TEXT])
+#         .map_async_chunked(splitter.run)  # str -> TextChunks
+#         .map_async_chunked(partial(extractor.run, schema=my_schema))  # -> Neo4jGraph
+#         ...
+#     )
 
 
 def merge_graphs(graphs: list[Neo4jGraph]) -> Neo4jGraph:
@@ -104,8 +108,8 @@ def build_sink() -> Sink[Neo4jGraph]:
 
 # The same first stage, using the component's async `run` method instead.
 # `run` returns a `TextChunks` model, so unwrap it with `flat_map`. Components
-# whose `run` takes more than one argument (like the extractor) need a small
-# wrapper, as in `extract_entities_llm` above.
+# whose `run` takes more than one argument (like the extractor) need a
+# `partial`, as in the commented snippet above.
 #
 # NB: async stages are evaluated with `asyncio.run`, so they cannot be used from
 # inside a running event loop (a notebook, or an `async def main()`).
