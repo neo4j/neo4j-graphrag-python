@@ -909,3 +909,37 @@ class TestVectorCypherRetrieverSearchClausePath:
         fallback_query = driver.execute_query.call_args_list[1][0][0]
         assert "db.index.vector.queryNodes" in fallback_query
         assert "RETURN node.title AS title, score" in fallback_query
+
+    @patch(
+        "neo4j_graphrag.retrievers.vector.supports_search_clause", return_value=False
+    )
+    @patch("neo4j_graphrag.retrievers.VectorCypherRetriever._fetch_index_infos")
+    @patch("neo4j_graphrag.retrievers.base.get_version")
+    def test_embedding_node_property_used_in_filtered_procedure_query(
+        self,
+        mock_get_version: MagicMock,
+        _fetch_index_infos: MagicMock,
+        _mock_supports_search: MagicMock,
+        driver: MagicMock,
+    ) -> None:
+        """The property discovered by _fetch_index_infos must reach the query builder."""
+        mock_get_version.return_value = ((2026, 1, 0), False, True)
+
+        retriever = VectorCypherRetriever(
+            driver=driver,
+            index_name="my-index",
+            retrieval_query="RETURN node.id AS node_id, score",
+        )
+        retriever._node_label = "Document"
+        retriever._embedding_node_property = "my_embedding"
+        retriever._embedding_dimension = 3
+
+        driver.execute_query.return_value = [[], None, None]
+        retriever.search(
+            query_vector=[1.0, 2.0, 3.0],
+            top_k=5,
+            filters={"status": "active"},
+        )
+
+        executed_query = driver.execute_query.call_args[0][0]
+        assert "node.`my_embedding`" in executed_query
