@@ -1515,7 +1515,7 @@ requests = [
 
 [[package]]
 name = "google-cloud-aiplatform"
-version = "1.162.0"
+version = "2.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
@@ -1533,9 +1533,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ba/fa/20a86701f1d3bcbedfe03a965bd4ae000ba79863fb1c2b4b658965f1057d/google_cloud_aiplatform-1.162.0.tar.gz", hash = "sha256:2403f75e6e44e879aecc0eab2d8c26e972507e4b4414d873b31cd4f4b49c9edb", size = 11218765, upload-time = "2026-07-21T23:17:44.419Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/74/37/df458b19ba3a03a7ba56490e0f7e765c4f06f53c40c2b1456ae5fbf8468a/google_cloud_aiplatform-2.5.0.tar.gz", hash = "sha256:84eec237446e947783d28d6dca93133a9e033e96c5162e22c9ad5641dcddd374", size = 11364831, upload-time = "2026-10-14T00:50:19.934Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d4/b8/6f10db46713d03d4e889d569b8b0e10e4334d2cab26b9f865c78b1e4e4d9/google_cloud_aiplatform-1.162.0-py2.py3-none-any.whl", hash = "sha256:07ac79932b8f7a683c3bec6dcc21dd05234b55d01636b5a622ec93c18aad15fd", size = 9391054, upload-time = "2026-07-21T23:17:41.173Z" },
+    { url = "https://files.pythonhosted.org/packages/ff/95/4a6715a1383e56850c9bff0667de38f96e04c870b6a69f6d1ed8e93ebd24/google_cloud_aiplatform-2.5.0-py2.py3-none-any.whl", hash = "sha256:9415de66b1fac691912a0c437f239f707e097409538e7f153a77c2edd690deba", size = 9475377, upload-time = "2026-10-14T00:50:16.549Z" },
 ]
 
 [[package]]
@@ -3277,7 +3277,7 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'bedrock'", specifier = ">=1.35.0,<2.0.0" },
     { name = "cohere", marker = "extra == 'cohere'", specifier = ">=5.9.0,<6.0.0" },
     { name = "fsspec", specifier = ">=2024.12.0,<2027.0.0" },
-    { name = "google-cloud-aiplatform", marker = "extra == 'google'", specifier = ">=1.66.0,<2.0.0" },
+    { name = "google-cloud-aiplatform", marker = "extra == 'google'", specifier = ">=2.5.0,<2.6.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = ">=1.62.0,<3.0.0" },
     { name = "json-repair", specifier = ">=0.44.1,<1.0.0" },
     { name = "langchain-huggingface", marker = "extra == 'examples'", specifier = ">=0.1.0,<2.0.0" },
