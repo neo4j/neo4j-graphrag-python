@@ -6,10 +6,8 @@ Text goes through three independent, swappable stages:
 
 * The splitter is the real `FixedSizeSplitter`, used through its synchronous
   `iter_chunks` method with `flat_map` (one text -> many chunks).
-* Components are not callable and their `run` methods are `async`, so they
-  cannot be given to `map` as they are (you would get unawaited coroutines).
-  Use a synchronous helper with `map`/`flat_map`, or `map_async_chunked` for
-  `run` (see the second pipeline below).
+* A component's `run` method is `async`: pass it to `map_async_chunked` (see the
+  second pipeline below), or use a synchronous helper with `map`/`flat_map`.
 * The extractor is a small stand-in so the example runs offline. To use an LLM,
   swap in `LLMEntityRelationExtractor` (see the commented snippet below): the
   rest of the pipeline does not change.
