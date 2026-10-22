@@ -156,20 +156,29 @@ def clear_version_cache() -> None:
 def supports_search_clause(
     driver: neo4j.Driver, database: Optional[str] = None
 ) -> bool:
-    """Check if the Neo4j server supports the SEARCH clause (>= 2026.01).
+    """Check if the Neo4j server supports the SEARCH clause.
+
+    Self-managed servers report year-based versions and support SEARCH from
+    2026.01. Aura supports the Cypher 25 SEARCH clause as well, but Aura does
+    not keep a version scheme that tracks its engine: since the March 2025
+    release it pins `dbms.components()` to `5.27.0` for clients that parse
+    SemVer, a frozen constant that every Aura instance reports regardless of
+    the engine it runs. So on Aura only an exact `5.27.0` counts as
+    SEARCH-capable; the `>=` comparison used for self-managed servers would
+    also match year-based version strings (e.g. `2025.x`).
 
     Uses cached version detection. On connection errors, returns False
     so callers fall back to the procedure-based path.
 
     Args:
-        driver: Neo4j Python driver instance.
-        database: Optional database name.
+        driver (neo4j.Driver): The Neo4j Python driver instance.
+        database (str, optional): The name of the Neo4j database.
 
     Returns:
         True if SEARCH clause is supported, False otherwise.
     """
     try:
-        version_tuple, _, _ = get_version_cached(driver, database)
+        version_tuple, is_aura, _ = get_version_cached(driver, database)
     except Exception:
         logger.debug(
             "Failed to detect Neo4j version for SEARCH clause support, "
@@ -177,6 +186,8 @@ def supports_search_clause(
             exc_info=True,
         )
         return False
+    if is_aura:
+        return version_tuple == (5, 27, 0)
     return version_tuple >= (2026, 1, 0)
 
 
