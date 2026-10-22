@@ -9,8 +9,9 @@ Text goes through three independent, swappable stages:
 * A component's `run` method is `async`: pass it to `map_async_chunked` (see the
   second pipeline below), or use a synchronous helper with `map`/`flat_map`.
 * The extractor is a small stand-in so the example runs offline. To use an LLM,
-  swap in `LLMEntityRelationExtractor` (see the commented snippet below): the
-  rest of the pipeline does not change.
+  swap in `LLMEntityRelationExtractor` (see the commented snippet below). Its
+  `run` takes all the chunks of a document and returns one graph, so it replaces
+  the extract, batch and merge stages together.
 * The sink prints the graph by default. Set NEO4J_URI, NEO4J_USERNAME and
   NEO4J_PASSWORD to write it to Neo4j with `Neo4jWriter` instead.
 
@@ -63,7 +64,7 @@ def extract_entities(chunk: TextChunk) -> Neo4jGraph:
 #         Pipeline([TEXT])
 #         .map_async_chunked(splitter.run)  # str -> TextChunks
 #         .map_async_chunked(partial(extractor.run, schema=my_schema))  # -> Neo4jGraph
-#         ...
+#         .to_sink(build_sink())
 #     )
 
 
@@ -84,25 +85,32 @@ class KGWriterSink(Sink[Neo4jGraph]):
 
     def write(self, element: Neo4jGraph) -> None:
         result = asyncio.run(self.writer.run(element))
+        # writers report failures in their result rather than raising
+        if result.status != "SUCCESS":
+            raise RuntimeError(f"Write failed: {result.metadata}")
         print(f"write status: {result.status}")
 
 
-def build_sink() -> Sink[Neo4jGraph]:
-    if uri := os.getenv("NEO4J_URI"):
-        auth = (os.getenv("NEO4J_USERNAME", "neo4j"), os.environ["NEO4J_PASSWORD"])
-        driver = neo4j.GraphDatabase.driver(uri, auth=auth)
-        return KGWriterSink(Neo4jWriter(driver=driver, clean_db=False))
-    return PrintSink()
+def run_pipeline(sink: Sink[Neo4jGraph]) -> None:
+    (
+        Pipeline([TEXT])
+        .flat_map(splitter.iter_chunks, label="split")
+        .map(extract_entities, label="extract")
+        .grouped(1000, label="batch")  # one batch -> one graph
+        .map(merge_graphs, label="merge")
+        .to_sink(sink, label="write")
+    )
 
 
-(
-    Pipeline([TEXT])
-    .flat_map(splitter.iter_chunks, label="split")
-    .map(extract_entities, label="extract")
-    .grouped(1000, label="batch")  # one batch -> one graph
-    .map(merge_graphs, label="merge")
-    .to_sink(build_sink(), label="write")
-)
+if uri := os.getenv("NEO4J_URI"):
+    auth = (
+        os.getenv("NEO4J_USERNAME", "neo4j"),
+        os.getenv("NEO4J_PASSWORD", "password"),
+    )
+    with neo4j.GraphDatabase.driver(uri, auth=auth) as driver:
+        run_pipeline(KGWriterSink(Neo4jWriter(driver=driver, clean_db=False)))
+else:
+    run_pipeline(PrintSink())
 
 # The same first stage, using the component's async `run` method instead.
 # `run` returns a `TextChunks` model, so unwrap it with `flat_map`. Components
