@@ -4,6 +4,7 @@
 
 ### Changed
 
+- `WeaviateNeo4jRetriever` now tags the Weaviate client it is given with the `X-Weaviate-Client-Integration: neo4j-graphrag/<version>` header (REST and gRPC), which Weaviate 1.38+ uses to attribute traffic to integrations. It is best-effort and never fails retriever creation; a value the user already set on the client is kept.
 - `SchemaExtractionTemplate` now tells the model to define each node type once. A node label is global and carries one property and constraint set.
 - Lockfile now uses CPU-only PyTorch wheels by default: the `sentence-transformers` and `examples` extras resolve `torch` from PyTorch's CPU index instead of PyPI (which on linux x86_64 pulls a ~900MB CUDA wheel plus the ~15-package `nvidia-*-cu12` closure the repo never uses). A new `gpu` extra resolves CUDA torch (`cu126`) instead, for `SentenceTransformerEmbeddings` on GPU. `--all-extras` therefore needs `--no-extra gpu` (CI workflows, tox and docs updated).
 
