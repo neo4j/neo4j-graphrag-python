@@ -314,13 +314,44 @@ def enrich_key_constraints_for_node_type(
 
     Relationship ``from``/``to`` joins still use
     :func:`get_relationship_join_key_property_name` (first single-property KEY,
-    else ``__id__`` as a normal column). That does not require a KEY constraint
-    on ``__id__`` when a semantic KEY already exists.
+    else ``__id__``). When joins use ``__id__`` but a semantic KEY already exists,
+    :func:`enrich_uniqueness_constraints_for_node_type` adds ``UNIQUENESS(__id__)``
+    so Data Importer node-reference validation (DANG-023) still passes without a
+    second KEY (which would cause Neo4j 22N41 on re-import).
     """
     base = get_key_constraints_for_node_type(schema, node_label)
     if base:
         return base
     return [(INTERNAL_ID_PROPERTY,)]
+
+
+def _has_single_property_group(
+    groups: list[tuple[str, ...]], property_name: str
+) -> bool:
+    return any(len(t) == 1 and t[0] == property_name for t in groups)
+
+
+def enrich_uniqueness_constraints_for_node_type(
+    schema: Optional[GraphSchema], node_label: str
+) -> list[tuple[str, ...]]:
+    """UNIQUENESS constraint groups for export metadata.
+
+    Starts from schema UNIQUENESS constraints. When relationship joins use
+    ``__id__`` (no single-property KEY) but enrichment did **not** emit
+    ``KEY(__id__)`` because a semantic KEY already exists, append
+    ``UNIQUENESS(__id__)`` if missing. Data Importer requires the join property
+    to be covered by a KEY or UNIQUENESS constraint (DANG-023).
+    """
+    base = get_uniqueness_constraints_for_node_type(schema, node_label)
+    join = get_relationship_join_key_property_name(schema, node_label)
+    if join != INTERNAL_ID_PROPERTY:
+        return base
+    enriched_keys = enrich_key_constraints_for_node_type(schema, node_label)
+    if _has_single_property_group(enriched_keys, INTERNAL_ID_PROPERTY):
+        return base
+    if _has_single_property_group(base, INTERNAL_ID_PROPERTY):
+        return base
+    return [*base, (INTERNAL_ID_PROPERTY,)]
 
 
 def flatten_key_constraint_property_names(
@@ -339,11 +370,10 @@ def get_relationship_join_key_property_name(
     """Property used in relationship Parquet ``from``/``to`` and endpoint metadata.
 
     Returns the first **single-property** KEY from the schema for this label; if none,
-    returns ``__id__`` (internal node id in row values). Independent of
-    :func:`enrich_key_constraints_for_node_type`: when the schema has no
-    single-property KEY (including composite-only), joins still use ``__id__``
-    as a column, but enrichment only adds ``KEY(__id__)`` when there is no
-    semantic KEY at all.
+    returns ``__id__`` (internal node id in row values). When the join is ``__id__``
+    and a semantic KEY already exists, export metadata keeps that KEY and adds
+    ``UNIQUENESS(__id__)`` via :func:`enrich_uniqueness_constraints_for_node_type`
+    rather than a second ``KEY(__id__)``.
     """
     base = get_key_constraints_for_node_type(schema, node_label)
     name = _first_single_property_key_name_from_groups(base)
@@ -948,6 +978,9 @@ class Neo4jGraphParquetFormatter:
                 labels_list.append("__Entity__")
 
             enriched_keys = enrich_key_constraints_for_node_type(self.schema, label)
+            enriched_uniques = enrich_uniqueness_constraints_for_node_type(
+                self.schema, label
+            )
             dims_for_label = label_to_embedding_dims.get(label, {})
             indexes_meta: Optional[list[dict[str, Any]]] = (
                 [
@@ -967,13 +1000,11 @@ class Neo4jGraphParquetFormatter:
                     primary_key_property_names=flatten_key_constraint_property_names(
                         enriched_keys
                     ),
-                    uniqueness_property_names=get_uniqueness_property_names_for_node_type(
-                        self.schema, label
+                    uniqueness_property_names=flatten_key_constraint_property_names(
+                        enriched_uniques
                     ),
                     key_constraints=enriched_keys,
-                    uniqueness_constraints=get_uniqueness_constraints_for_node_type(
-                        self.schema, label
-                    ),
+                    uniqueness_constraints=enriched_uniques,
                     existence_constraints=get_existence_constraints_for_node_type(
                         self.schema, label
                     ),
