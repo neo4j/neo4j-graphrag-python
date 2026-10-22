@@ -21,13 +21,21 @@ with ``runpy`` and their output is checked.
 from __future__ import annotations
 
 import runpy
+from functools import partial
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
+from neo4j_graphrag.components.entity_relation_extractor import (
+    LLMEntityRelationExtractor,
+)
 from neo4j_graphrag.components.kg_writer import KGWriterModel
+from neo4j_graphrag.components.schema import GraphSchema
 from neo4j_graphrag.components.types import Neo4jGraph, Neo4jNode
+from neo4j_graphrag.llm import LLMInterface
+from neo4j_graphrag.llm.types import LLMResponse
+from neo4j_graphrag.pipeline import Pipeline
 
 EXAMPLES_DIR = Path(__file__).parents[3] / "examples" / "pipeline"
 ALL_NODES = "['Acme', 'Alice', 'Bob', 'Carol', 'Dave', 'Initech', 'Paris']"
@@ -133,3 +141,28 @@ class TestKGComponentsExample:
         graphs = [example["extract_entities"](c) for c in chunk]
         merged = example["merge_graphs"](graphs + graphs)  # duplicates collapse
         assert sorted(n.id for n in merged.nodes) == ["Alice", "Bob"]
+
+    def test_real_extractor_with_partial_as_documented_in_the_example(self) -> None:
+        """The commented LLM snippet in the example: splitter.run, then
+        partial(extractor.run, schema=...), both through map_async_chunked."""
+        example = run_example("04_kg_components.py")
+        llm = MagicMock(spec=LLMInterface)
+        llm.ainvoke.return_value = LLMResponse(
+            content='{"nodes": [{"id": "0", "label": "Person", '
+            '"properties": {"name": "Alice"}}], "relationships": []}'
+        )
+        extractor = LLMEntityRelationExtractor(llm=llm)
+
+        graphs = (
+            Pipeline(["Alice works at Acme. Bob lives in Paris."])
+            .map_async_chunked(example["splitter"].run)
+            .map_async_chunked(
+                partial(extractor.run, schema=GraphSchema(node_types=()))
+            )
+            .collect()
+        )
+
+        assert len(graphs) == 1
+        assert isinstance(graphs[0], Neo4jGraph)
+        assert any(n.label == "Person" for n in graphs[0].nodes)
+        assert llm.ainvoke.await_count >= 1  # the LLM was called per chunk

@@ -64,7 +64,7 @@ def extract_entities(chunk: TextChunk) -> Neo4jGraph:
 #         Pipeline([TEXT])
 #         .map_async_chunked(splitter.run)  # str -> TextChunks
 #         .map_async_chunked(partial(extractor.run, schema=my_schema))  # -> Neo4jGraph
-#         .to_sink(build_sink())
+#         .to_sink(PrintSink())  # or KGWriterSink(Neo4jWriter(...)), as below
 #     )
 
 
