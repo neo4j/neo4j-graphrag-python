@@ -177,6 +177,7 @@ class SimpleKGPipeline:
         file_path: Optional[str] = None,
         text: Optional[str] = None,
         document_metadata: Optional[dict[str, Any]] = None,
+        entity_metadata: Optional[dict[str, Any]] = None,
     ) -> PipelineResult:
         """
         Asynchronously runs the knowledge graph building process.
@@ -186,6 +187,9 @@ class SimpleKGPipeline:
                 If `from_file` is False, can be used to set the Document node path property.
             text (Optional[str]): The text content to process. Required if `from_file` is False.
             document_metadata (Optional[dict[str, Any]]): The metadata to attach to the document.
+            entity_metadata (Optional[dict[str, Any]]): Properties to stamp on every
+                extracted entity node and relationship, in addition to the properties the
+                LLM produces. Useful for tenant, owner or ingestion-time markers.
 
         Returns:
             PipelineResult: The result of the pipeline execution.
@@ -195,5 +199,6 @@ class SimpleKGPipeline:
                 "file_path": file_path,
                 "text": text,
                 "document_metadata": document_metadata,
+                "entity_metadata": entity_metadata,
             }
         )
