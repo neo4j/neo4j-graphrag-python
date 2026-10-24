@@ -9,6 +9,7 @@
 
 ### Fixed
 
+- Parquet export no longer appends synthetic `KEY(__id__)` when a label already has a semantic KEY (including composite-only KEYs). `__id__` is still written as a normal column and still used for relationship `from`/`to` when there is no single-property KEY; `KEY(__id__)` is emitted only for keyless labels. When joins use `__id__` under a semantic KEY, export metadata adds `UNIQUENESS(__id__)` instead so Data Importer node-reference validation (DANG-023) passes without a second KEY (Neo4j 22N41 on re-import).
 - Fixed `Neo4jWriter` ignoring `neo4j_database` during setup and cleanup, ensuring the temporary-ID index is created and temporary IDs are removed in the configured database.
 - Parquet writes no longer fail when a `LIST` property mixes element types across rows or inside one list (for example `["1998"]` and `[1998]`). `Neo4jGraphParquetFormatter._normalize_column_types` stringifies those elements. Uniform lists and int/float lists are left unchanged, so numeric lists still promote to `list<float32>`. Node and relationship files share this path.
 - Experimental: LLM-auto-generated schemas now reconcile duplicate `node_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. Direct `GraphSchema` construction rejects remaining duplicate node labels with a clear error instead of a last-write-wins index that could report an undefined constraint property. This reflects that Neo4j node labels are global per name.
