@@ -121,6 +121,7 @@ class FixedSizeSplitter(TextSplitter):
         approximate_start = 0
         skip_adjust_chunk_start = False
         end = 0
+        previous_start = -1
 
         while end < text_length:
             if self.approximate:
@@ -129,6 +130,11 @@ class FixedSizeSplitter(TextSplitter):
                     if skip_adjust_chunk_start
                     else _adjust_chunk_start(text, approximate_start)
                 )
+                if start <= previous_start:
+                    # Walking back to the word start would restart at (or
+                    # before) the previous chunk, re-emitting it and stalling
+                    # progress. Fall back to the proposed start instead.
+                    start = approximate_start
                 # adjust start and end to avoid cutting words in the middle
                 approximate_end = min(start + self.chunk_size, text_length)
                 end = _adjust_chunk_end(text, start, approximate_end)
@@ -141,6 +147,7 @@ class FixedSizeSplitter(TextSplitter):
                 start = approximate_start
                 end = min(start + self.chunk_size, text_length)
 
+            previous_start = start
             chunk_text = text[start:end]
             yield TextChunk(text=chunk_text, index=index)
             index += 1

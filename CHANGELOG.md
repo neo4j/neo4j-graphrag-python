@@ -9,6 +9,7 @@
 
 ### Fixed
 
+- Fixed `FixedSizeSplitter` (with `approximate=True`) emitting the same chunk twice and then raising `IndexError: string index out of range` when a word is nearly as long as `chunk_size`. Moving the next chunk's start back to a word boundary can no longer land on or before the previous chunk's start.
 - Fixed `Neo4jWriter` ignoring `neo4j_database` during setup and cleanup, ensuring the temporary-ID index is created and temporary IDs are removed in the configured database.
 - Parquet writes no longer fail when a `LIST` property mixes element types across rows or inside one list (for example `["1998"]` and `[1998]`). `Neo4jGraphParquetFormatter._normalize_column_types` stringifies those elements. Uniform lists and int/float lists are left unchanged, so numeric lists still promote to `list<float32>`. Node and relationship files share this path.
 - Experimental: LLM-auto-generated schemas now reconcile duplicate `node_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. Direct `GraphSchema` construction rejects remaining duplicate node labels with a clear error instead of a last-write-wins index that could report an undefined constraint property. This reflects that Neo4j node labels are global per name.
