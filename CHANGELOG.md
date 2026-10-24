@@ -4,6 +4,8 @@
 
 ### Changed
 
+- (**breaking**) `GeminiLLM`'s default model is now `gemini-3.8-flash`. The previous default, `gemini-2.0-flash`, was shut down by Google on 2026-06-01, so `GeminiLLM()` with no explicit model failed. Callers relying on the old default will now reach a different model; pass `model_name` explicitly to pin one.
+- (**breaking**) `VertexAILLM`'s default model is now `gemini-3.8-flash`. The previous default, `gemini-2.5-flash`, was retired on Vertex AI on 2026-10-20. Callers relying on the old default will now reach a different model; pass `model_name` explicitly to pin one.
 - `SchemaExtractionTemplate` now tells the model to define each node type once. A node label is global and carries one property and constraint set.
 - Lockfile now uses CPU-only PyTorch wheels by default: the `sentence-transformers` and `examples` extras resolve `torch` from PyTorch's CPU index instead of PyPI (which on linux x86_64 pulls a ~900MB CUDA wheel plus the ~15-package `nvidia-*-cu12` closure the repo never uses). A new `gpu` extra resolves CUDA torch (`cu126`) instead, for `SentenceTransformerEmbeddings` on GPU. `--all-extras` therefore needs `--no-extra gpu` (CI workflows, tox and docs updated).
 
