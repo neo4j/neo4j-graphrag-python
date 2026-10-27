@@ -246,3 +246,32 @@ async def test_no_infinite_loop_on_long_word_without_spaces() -> None:
     assert len(result.chunks) > 0
     for chunk in result.chunks:
         assert len(chunk.text) > 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "text, chunk_size, chunk_overlap",
+    [
+        ("a OpenAIEmbeddings graph", 20, 5),
+        ("aa aaaaa aa", 7, 3),
+    ],
+)
+async def test_approximate_start_never_moves_back_to_previous_chunk(
+    text: str, chunk_size: int, chunk_overlap: int
+) -> None:
+    """
+    When a word is nearly as long as chunk_size, walking the next start back
+    to the beginning of that word could land on the previous chunk's start.
+    The same chunk was then emitted again, and the guard that forces
+    progress jumped approximate_start past the end of the text, raising
+    IndexError in _adjust_chunk_start.
+    """
+    splitter = FixedSizeSplitter(
+        chunk_size=chunk_size, chunk_overlap=chunk_overlap, approximate=True
+    )
+    result = await splitter.run(text)
+    chunks = [chunk.text for chunk in result.chunks]
+
+    assert text.endswith(chunks[-1])
+    assert all(0 < len(chunk) <= chunk_size for chunk in chunks)
+    assert all(a != b for a, b in zip(chunks, chunks[1:]))
