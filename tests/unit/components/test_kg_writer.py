@@ -1089,13 +1089,89 @@ async def test_parquet_writer_composite_key_constraint() -> None:
         assert cols["firstname"]["is_primary_key"] is True
         assert cols["surname"]["is_primary_key"] is True
         assert cols["age"]["is_primary_key"] is False
-        assert cols[INTERNAL_ID_PROPERTY]["is_primary_key"] is True
-        # Structured constraints metadata should preserve composite grouping
+        # __id__ remains a join column with UNIQUENESS (not KEY) when a
+        # semantic (composite) KEY already exists.
+        assert cols[INTERNAL_ID_PROPERTY]["is_primary_key"] is False
+        assert cols[INTERNAL_ID_PROPERTY]["is_unique"] is True
+        assert INTERNAL_ID_PROPERTY in cols
+        # Structured constraints: composite KEY + synthetic UNIQUENESS(__id__)
         assert "constraints" in node_file
         key_constraints = [c for c in node_file["constraints"] if c["type"] == "KEY"]
-        assert len(key_constraints) == 2
-        assert key_constraints[0]["properties"] == ["firstname", "surname"]
-        assert key_constraints[1]["properties"] == [INTERNAL_ID_PROPERTY]
+        assert key_constraints == [
+            {"type": "KEY", "properties": ["firstname", "surname"]}
+        ]
+        uniq_constraints = [
+            c for c in node_file["constraints"] if c["type"] == "UNIQUENESS"
+        ]
+        assert uniq_constraints == [
+            {"type": "UNIQUENESS", "properties": [INTERNAL_ID_PROPERTY]}
+        ]
+
+
+@pytest.mark.asyncio
+async def test_parquet_writer_composite_key_joins_on_id_without_synthetic_key() -> None:
+    """Composite-only KEY: rel joins on __id__; KEY stays composite; UNIQUENESS(__id__) added."""
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    schema_dict: dict[str, Any] = {
+        "node_types": [
+            {
+                "label": "Period",
+                "properties": [
+                    {"name": "quarter", "type": "STRING"},
+                    {"name": "year", "type": "INTEGER"},
+                ],
+            }
+        ],
+        "relationship_types": [{"label": "NEXT"}],
+        "patterns": [["Period", "NEXT", "Period"]],
+        "constraints": [
+            {
+                "type": "KEY",
+                "node_type": "Period",
+                "property_names": ["quarter", "year"],
+                "relationship_type": None,
+            }
+        ],
+    }
+    with tempfile.TemporaryDirectory() as tmpdir:
+        out = Path(tmpdir)
+        dest = _LocalParquetDestination(out)
+        writer = ParquetWriter(
+            nodes_dest=dest,
+            relationships_dest=dest,
+            collision_handler=FilenameCollisionHandler(),
+        )
+        p1 = Neo4jNode(
+            id="p1", label="Period", properties={"quarter": "Q1", "year": 2020}
+        )
+        p2 = Neo4jNode(
+            id="p2", label="Period", properties={"quarter": "Q2", "year": 2020}
+        )
+        rel = Neo4jRelationship(
+            start_node_id="p1", end_node_id="p2", type="NEXT", properties={}
+        )
+        graph = Neo4jGraph(nodes=[p1, p2], relationships=[rel])
+        result = await writer.run(
+            graph=graph, schema=GraphSchema.model_validate(schema_dict)
+        )
+        assert result.status == "SUCCESS"
+        assert result.metadata is not None
+        node_file = next(f for f in result.metadata["files"] if f["is_node"])
+        key_cs = [c for c in node_file["constraints"] if c["type"] == "KEY"]
+        assert key_cs == [{"type": "KEY", "properties": ["quarter", "year"]}]
+        uniq_cs = [c for c in node_file["constraints"] if c["type"] == "UNIQUENESS"]
+        assert uniq_cs == [{"type": "UNIQUENESS", "properties": [INTERNAL_ID_PROPERTY]}]
+        cols = {c["name"]: c for c in node_file["columns"]}
+        assert cols[INTERNAL_ID_PROPERTY]["is_primary_key"] is False
+        assert cols[INTERNAL_ID_PROPERTY]["is_unique"] is True
+        rel_file = next(f for f in result.metadata["files"] if not f["is_node"])
+        assert rel_file["start_node_primary_keys"] == [INTERNAL_ID_PROPERTY]
+        assert rel_file["end_node_primary_keys"] == [INTERNAL_ID_PROPERTY]
+        table = pq.read_table(rel_file["file_path"])
+        assert table.column("from").to_pylist() == ["p1"]
+        assert table.column("to").to_pylist() == ["p2"]
 
 
 @pytest.mark.asyncio
