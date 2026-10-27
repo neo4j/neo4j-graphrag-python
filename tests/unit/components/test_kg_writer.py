@@ -1162,9 +1162,7 @@ async def test_parquet_writer_composite_key_joins_on_id_without_synthetic_key() 
         key_cs = [c for c in node_file["constraints"] if c["type"] == "KEY"]
         assert key_cs == [{"type": "KEY", "properties": ["quarter", "year"]}]
         uniq_cs = [c for c in node_file["constraints"] if c["type"] == "UNIQUENESS"]
-        assert uniq_cs == [
-            {"type": "UNIQUENESS", "properties": [INTERNAL_ID_PROPERTY]}
-        ]
+        assert uniq_cs == [{"type": "UNIQUENESS", "properties": [INTERNAL_ID_PROPERTY]}]
         cols = {c["name"]: c for c in node_file["columns"]}
         assert cols[INTERNAL_ID_PROPERTY]["is_primary_key"] is False
         assert cols[INTERNAL_ID_PROPERTY]["is_unique"] is True
