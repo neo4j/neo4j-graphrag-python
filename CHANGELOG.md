@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.23.0
+
 ### Changed
 
 - `SchemaExtractionTemplate` now tells the model to define each node type once. A node label is global and carries one property and constraint set.
