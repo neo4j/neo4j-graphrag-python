@@ -1653,6 +1653,39 @@ def test_format_parquet_writes_mixed_list_elements() -> None:
     assert years == [["1998"], ["2001"]]
 
 
+@pytest.mark.parametrize(
+    "rows, expected",
+    [
+        pytest.param(
+            [{"a": [12.3, 4.5]}, {"a": [12.3, "N/A"]}, {"a": [1, 2]}],
+            [["12.3", "4.5"], ["12.3", "N/A"], ["1", "2"]],
+            id="numeric_list_sample_then_list_with_string",
+        ),
+        pytest.param(
+            [{"a": [12.3, 4.5]}, {"a": "N/A"}],
+            ["[12.3, 4.5]", "N/A"],
+            id="list_then_scalar_string",
+        ),
+        pytest.param(
+            [{"a": [12.3, 4.5]}, {"a": [[1]]}],
+            [["12.3", "4.5"], ["[1]"]],
+            id="numeric_list_then_nested_list",
+        ),
+    ],
+)
+def test_format_parquet_mixed_list_and_numeric_sample(
+    rows: list[dict[str, Any]], expected: list[Any]
+) -> None:
+    """A numeric list as the first sample must not lock the column to list<float32>."""
+    pytest.importorskip("pyarrow")
+    import pyarrow.parquet as pq
+
+    data, _schema = Neo4jGraphParquetFormatter().format_parquet(
+        rows, "relationship type 'HAS_FIGURES_FOR_PERIOD'"
+    )
+    assert pq.read_table(BytesIO(data)).column("a").to_pylist() == expected
+
+
 @pytest.mark.asyncio
 async def test_parquet_writer_mixed_property_types() -> None:
     """ParquetWriter succeeds when nodes of the same label have mixed property types."""
