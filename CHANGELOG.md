@@ -2,6 +2,10 @@
 
 ## Next
 
+### Fixed
+
+- `BedrockLLM` and `GeminiLLM` `invoke_with_tools` / `ainvoke_with_tools` now go through the rate limit handler, like `invoke` / `ainvoke`, so a 429 or throttling response is retried instead of failing immediately.
+
 ## 1.23.0
 
 ### Changed

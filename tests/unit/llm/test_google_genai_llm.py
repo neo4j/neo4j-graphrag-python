@@ -27,7 +27,9 @@ from neo4j_graphrag.llm import (
     GeminiImageMimeType,
     GeminiLLM,
 )
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.rate_limit import RetryRateLimitHandler
 
 
 @pytest.fixture
@@ -484,3 +486,67 @@ def test_gemini_image_mime_type_constants() -> None:
     """The supported set is derived from the Literal and the default is a member."""
     assert GEMINI_SUPPORTED_IMAGE_MIME_TYPES == frozenset(get_args(GeminiImageMimeType))
     assert GEMINI_DEFAULT_IMAGE_MIME_TYPE in GEMINI_SUPPORTED_IMAGE_MIME_TYPES
+
+
+def _make_tool_response() -> MagicMock:
+    part = MagicMock()
+    part.function_call.name = "test_tool"
+    part.function_call.args = {"param1": "x"}
+    response = MagicMock()
+    response.candidates = [MagicMock(content=MagicMock(parts=[part]))]
+    return response
+
+
+def _fast_retry_handler() -> RetryRateLimitHandler:
+    return RetryRateLimitHandler(max_attempts=3, min_wait=0, max_wait=0, jitter=False)
+
+
+def test_gemini_invoke_with_tools_retries_on_rate_limit(
+    mock_genai: Tuple[MagicMock, MagicMock], test_tool: Tool
+) -> None:
+    mock_gen, _ = mock_genai
+    mock_client = mock_gen.Client.return_value
+    mock_client.models.generate_content.side_effect = [
+        Exception("429 RESOURCE_EXHAUSTED: Resource exhausted"),
+        _make_tool_response(),
+    ]
+
+    llm = GeminiLLM("gemini-2.0-flash", rate_limit_handler=_fast_retry_handler())
+    response = llm.invoke_with_tools("hello", [test_tool])
+
+    assert mock_client.models.generate_content.call_count == 2
+    assert response.tool_calls[0].name == "test_tool"
+
+
+@pytest.mark.asyncio
+async def test_gemini_ainvoke_with_tools_retries_on_rate_limit(
+    mock_genai: Tuple[MagicMock, MagicMock], test_tool: Tool
+) -> None:
+    mock_gen, _ = mock_genai
+    mock_client = mock_gen.Client.return_value
+    mock_client.aio.models.generate_content = AsyncMock(
+        side_effect=[
+            Exception("429 RESOURCE_EXHAUSTED: Resource exhausted"),
+            _make_tool_response(),
+        ]
+    )
+
+    llm = GeminiLLM("gemini-2.0-flash", rate_limit_handler=_fast_retry_handler())
+    response = await llm.ainvoke_with_tools("hello", [test_tool])
+
+    assert mock_client.aio.models.generate_content.call_count == 2
+    assert response.tool_calls[0].name == "test_tool"
+
+
+def test_gemini_invoke_with_tools_does_not_retry_other_errors(
+    mock_genai: Tuple[MagicMock, MagicMock], test_tool: Tool
+) -> None:
+    mock_gen, _ = mock_genai
+    mock_client = mock_gen.Client.return_value
+    mock_client.models.generate_content.side_effect = Exception("400 INVALID_ARGUMENT")
+
+    llm = GeminiLLM("gemini-2.0-flash", rate_limit_handler=_fast_retry_handler())
+    with pytest.raises(LLMGenerationError):
+        llm.invoke_with_tools("hello", [test_tool])
+
+    assert mock_client.models.generate_content.call_count == 1
