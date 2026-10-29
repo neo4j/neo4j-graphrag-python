@@ -345,7 +345,7 @@ def _fast_retry_handler() -> RetryRateLimitHandler:
 
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._parse_tool_response")
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._call_llm")
-def test_vertexai_invoke_with_tools_retries_on_rate_limit(
+def test_vertexai_invoke_with_tools_retries_when_error_is_wrapped(
     mock_call_llm: Mock, mock_parse_tool: Mock, test_tool: Tool
 ) -> None:
     mock_call_llm.side_effect = [
@@ -364,7 +364,7 @@ def test_vertexai_invoke_with_tools_retries_on_rate_limit(
 @pytest.mark.asyncio
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._parse_tool_response")
 @patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._acall_llm")
-async def test_vertexai_ainvoke_with_tools_retries_on_rate_limit(
+async def test_vertexai_ainvoke_with_tools_retries_when_error_is_wrapped(
     mock_acall_llm: AsyncMock, mock_parse_tool: Mock, test_tool: Tool
 ) -> None:
     mock_acall_llm.side_effect = [
