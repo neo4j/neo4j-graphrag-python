@@ -349,6 +349,7 @@ class VertexAILLM(LLMBase):
         except ResponseValidationError as e:
             raise LLMGenerationError("Error calling VertexAILLM") from e
 
+    @rate_limit_handler_decorator
     def __invoke_v1_with_tools(
         self,
         input: str,
@@ -364,6 +365,7 @@ class VertexAILLM(LLMBase):
         )
         return self._parse_tool_response(response)
 
+    @async_rate_limit_handler_decorator
     async def __ainvoke_v1_with_tools(
         self,
         input: str,
