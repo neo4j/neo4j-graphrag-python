@@ -154,3 +154,11 @@ def test_cohere_embedder_per_call_input_type_wins(mock_cohere: Mock) -> None:
 
     _, kwargs = mock_cohere.Client.return_value.embed.call_args
     assert kwargs["input_type"] == "classification"
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embedder_embedding_model_name_is_string(mock_cohere: Mock) -> None:
+    """A per-call value overrides the constructor's without colliding with it."""
+    embedder = CohereEmbeddings(model="embed-english-v3.0")
+    assert isinstance(embedder.embedding_model_name, str)
+    assert embedder.embedding_model_name == "embed-english-v3.0"
