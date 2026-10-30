@@ -732,7 +732,7 @@ Example usage:
 
 .. code:: python
 
-    from neo4j_graphrag.components.lexical_graph_builder import LexicalGraphBuilder
+    from neo4j_graphrag.components.lexical_graph import LexicalGraphBuilder
     from neo4j_graphrag.components.types import LexicalGraphConfig
 
     lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig())
