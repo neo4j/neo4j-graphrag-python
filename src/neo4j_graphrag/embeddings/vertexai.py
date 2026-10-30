@@ -50,6 +50,7 @@ class VertexAIEmbeddings(Embedder):
                 Please install it with `pip install "neo4j-graphrag[google]"`."""
             )
         super().__init__(rate_limit_handler)
+        self._model_name = model
         self.model = TextEmbeddingModel.from_pretrained(model)
 
     @rate_limit_handler
@@ -78,4 +79,4 @@ class VertexAIEmbeddings(Embedder):
 
     @property
     def embedding_model_name(self) -> str:
-        return self.model
+        return self._model_name

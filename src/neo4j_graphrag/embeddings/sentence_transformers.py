@@ -40,6 +40,7 @@ class SentenceTransformerEmbeddings(Embedder):
         super().__init__(rate_limit_handler)
         self.torch = torch
         self.np = np
+        self._model_name = model
         self.model = sentence_transformers.SentenceTransformer(model, *args, **kwargs)
 
     def embed_query(self, text: str) -> Any:
@@ -63,4 +64,4 @@ class SentenceTransformerEmbeddings(Embedder):
 
     @property
     def embedding_model_name(self) -> str:
-        return self.model
+        return self._model_name
