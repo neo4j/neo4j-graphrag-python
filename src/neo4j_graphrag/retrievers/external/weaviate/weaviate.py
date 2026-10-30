@@ -21,6 +21,7 @@ import neo4j
 import weaviate.classes as wvc
 from pydantic import ValidationError
 
+from neo4j_graphrag import __version__
 from neo4j_graphrag.embeddings.base import Embedder
 from neo4j_graphrag.exceptions import (
     RetrieverInitializationError,
@@ -44,6 +45,39 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from weaviate.client import WeaviateClient
+
+# Weaviate (>= 1.38.0) reads this request header to attribute traffic to the
+# integration that sent it, formatted "{name}/{version}".
+_INTEGRATION_HEADER = "X-Weaviate-Client-Integration"
+_INTEGRATION_NAME = "neo4j-graphrag"
+
+
+def _register_integration(client: Any) -> None:
+    """Best-effort: tag the Weaviate client with the integration header.
+
+    ``client.integrations.configure`` applies the header to both the REST and
+    the gRPC transport (searches travel over gRPC). ``_IntegrationConfig`` is
+    private weaviate-client API, so failures are swallowed rather than breaking
+    the retriever. A header the user already set on the client is left alone.
+    """
+    try:
+        from pydantic import Field
+        from weaviate.connect.integrations import _IntegrationConfig
+
+        user_headers = client._connection.additional_headers or {}
+        if any(k.lower() == _INTEGRATION_HEADER.lower() for k in user_headers):
+            return
+
+        value = f"{_INTEGRATION_NAME}/{__version__}"
+
+        class _Neo4jGraphRAGIntegration(_IntegrationConfig):
+            integration: str = Field(
+                default=value, serialization_alias=_INTEGRATION_HEADER
+            )
+
+        client.integrations.configure(_Neo4jGraphRAGIntegration())
+    except Exception:  # telemetry must never break the retriever
+        logger.debug("Could not set the Weaviate integration header", exc_info=True)
 
 
 class WeaviateNeo4jRetriever(ExternalRetriever):
@@ -131,6 +165,7 @@ class WeaviateNeo4jRetriever(ExternalRetriever):
             node_label_neo4j,
         )
         self.client = validated_data.client_model.client
+        _register_integration(self.client)
         collection = validated_data.collection
         self.search_collection = self.client.collections.get(collection)
         self.embedder = (
