@@ -20,8 +20,13 @@ driver = GraphDatabase.driver(URI, auth=AUTH)
 
 # Create Embedder object
 class CustomEmbedder(Embedder):
+
     def embed_query(self, text: str) -> list[float]:
         return [random() for _ in range(DIMENSION)]
+
+    @property
+    def embedding_model_name(self) -> str:
+        return "random"
 
 
 embedder = CustomEmbedder()

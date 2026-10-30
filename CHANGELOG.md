@@ -2,6 +2,12 @@
 
 ## Next
 
+### Added
+
+- Embedders now have a `embedding_model_name` property that must be implemented.
+- Chunk node metadata now contains `embedding_model_name`.
+
+
 ## 1.23.0
 
 ### Changed

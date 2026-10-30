@@ -59,3 +59,7 @@ class Embedder(ABC):
             list[float]: A vector embedding.
         """
         return self.embed_query(text)
+
+    @property
+    def embedding_model_name(self) -> str:
+        return ""
