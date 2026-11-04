@@ -6,6 +6,9 @@
 
 - Embedders now have a `embedding_model_name` property that defaults to an empty string and must be implemented for subclasses for the real model name to be properly saved in the database.
 - Chunk node metadata now contains `embedding_model_name` which is saved as a new property on Chunk nodes in Neo4j.
+- New package `neo4j_graphrag.decision` for decision models, which return a probability for every option instead of generating text. It has the `DecisionModelInterface`, the `DecisionResponse` and `DecisionUsage` types, and `OpenRouterDecisionModel` for OpenRouter's decision API. Install it with `pip install "neo4j-graphrag[openrouter]"`. By default, rate limits, timeouts, network errors and server errors are retried up to 5 times.
+- `DecisionWalkRetriever` retrieves nodes by walking the graph one step at a time, and a decision model chooses each step, so no LLM is used to retrieve. The start node is passed in with `start_node_ids`, or it is found with a full-text index and one decision call. Each result has the end node's properties and the chain of relationships that reached it, and the metadata records every decision, its probabilities and the billed cost.
+- New exceptions `DecisionModelError` and `DecisionWalkRetrievalError`.
 
 
 ## 1.23.0

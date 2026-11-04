@@ -34,6 +34,18 @@ LLMResponse
 .. autoclass:: neo4j_graphrag.llm.types.LLMResponse
 
 
+DecisionUsage
+=============
+
+.. autoclass:: neo4j_graphrag.decision.DecisionUsage
+
+
+DecisionResponse
+================
+
+.. autoclass:: neo4j_graphrag.decision.DecisionResponse
+
+
 LLMMessage
 ===========
 
