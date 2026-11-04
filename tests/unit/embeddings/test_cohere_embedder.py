@@ -162,3 +162,60 @@ def test_cohere_embedder_embedding_model_name_is_string(mock_cohere: Mock) -> No
     embedder = CohereEmbeddings(model="embed-english-v3.0")
     assert isinstance(embedder.embedding_model_name, str)
     assert embedder.embedding_model_name == "embed-english-v3.0"
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embed_documents_groups_requests(mock_cohere: Mock) -> None:
+    embed = mock_cohere.Client.return_value.embed
+    embed.side_effect = lambda texts, model, **kwargs: MagicMock(
+        embeddings=[[float(t)] for t in texts]
+    )
+    embedder = CohereEmbeddings(model="embed-english-v3.0")
+    embedder.max_inputs_per_request = 2
+    res = embedder.embed_documents(["1", "2", "3"])
+    assert res == [[1.0], [2.0], [3.0]]
+    assert [c.kwargs["texts"] for c in embed.call_args_list] == [["1", "2"], ["3"]]
+    assert all(
+        c.kwargs["input_type"] == "search_document" for c in embed.call_args_list
+    )
+
+
+def test_cohere_default_request_limit() -> None:
+    assert CohereEmbeddings.max_inputs_per_request == 96
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embed_documents_explicit_input_type(mock_cohere: Mock) -> None:
+    embed = mock_cohere.Client.return_value.embed
+    embed.return_value = MagicMock(embeddings=[[1.0]])
+    embedder = CohereEmbeddings()
+    embedder.embed_documents(["a"], input_type="classification")
+    assert embed.call_args.kwargs["input_type"] == "classification"
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embed_documents_count_mismatch(mock_cohere: Mock) -> None:
+    mock_cohere.Client.return_value.embed.return_value = MagicMock(embeddings=[[1.0]])
+    embedder = CohereEmbeddings()
+    with pytest.raises(EmbeddingsGenerationError, match="1 embeddings for 2 inputs"):
+        embedder.embed_documents(["a", "b"])
+
+
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+def test_cohere_embed_documents_api_error(mock_cohere: Mock) -> None:
+    mock_cohere.Client.return_value.embed.side_effect = Exception("API Error")
+    embedder = CohereEmbeddings()
+    with pytest.raises(
+        EmbeddingsGenerationError, match="Failed to generate embeddings with Cohere"
+    ):
+        embedder.embed_documents(["a"])
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.embeddings.cohere.cohere")
+async def test_cohere_async_embed_documents(mock_cohere: Mock) -> None:
+    mock_cohere.Client.return_value.embed.return_value = MagicMock(
+        embeddings=[[1.0], [2.0]]
+    )
+    embedder = CohereEmbeddings()
+    assert await embedder.async_embed_documents(["a", "b"]) == [[1.0], [2.0]]

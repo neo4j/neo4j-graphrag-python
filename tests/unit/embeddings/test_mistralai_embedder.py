@@ -150,3 +150,58 @@ def test_mistralai_embedding_model_name_is_string(mock_mistral: Mock) -> None:
     embedder = MistralAIEmbeddings()
     assert isinstance(embedder.embedding_model_name, str)
     assert embedder.embedding_model_name == "mistral-embed"
+
+
+@patch("neo4j_graphrag.embeddings.mistral.Mistral")
+def test_mistralai_embed_documents_single_request(mock_mistral: Mock) -> None:
+    create = mock_mistral.return_value.embeddings.create
+    create.return_value = MagicMock(
+        data=[
+            MagicMock(embedding=[2.0], index=1),
+            MagicMock(embedding=[1.0], index=0),
+        ]
+    )
+    embedder = MistralAIEmbeddings()
+    assert embedder.embed_documents(["a", "b"]) == [[1.0], [2.0]]
+    create.assert_called_once_with(model="mistral-embed", inputs=["a", "b"])
+
+
+@patch("neo4j_graphrag.embeddings.mistral.Mistral")
+def test_mistralai_embed_documents_empty(mock_mistral: Mock) -> None:
+    embedder = MistralAIEmbeddings()
+    assert embedder.embed_documents([]) == []
+    mock_mistral.return_value.embeddings.create.assert_not_called()
+
+
+@patch("neo4j_graphrag.embeddings.mistral.Mistral")
+def test_mistralai_embed_documents_errors(mock_mistral: Mock) -> None:
+    create = mock_mistral.return_value.embeddings.create
+    embedder = MistralAIEmbeddings()
+
+    create.return_value = MagicMock(data=[MagicMock(embedding=[1.0], index=0)])
+    with pytest.raises(EmbeddingsGenerationError, match="1 embeddings for 2 inputs"):
+        embedder.embed_documents(["a", "b"])
+
+    create.return_value = MagicMock(data=[])
+    with pytest.raises(EmbeddingsGenerationError, match="Failed to retrieve"):
+        embedder.embed_documents(["a"])
+
+    create.return_value = MagicMock(data=[MagicMock(embedding="oops", index=0)])
+    with pytest.raises(EmbeddingsGenerationError, match="not a list of floats"):
+        embedder.embed_documents(["a"])
+
+    create.side_effect = Exception("API Error")
+    with pytest.raises(
+        EmbeddingsGenerationError, match="Failed to generate embeddings with MistralAI"
+    ):
+        embedder.embed_documents(["a"])
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.embeddings.mistral.Mistral")
+async def test_mistralai_async_embed_documents(mock_mistral: Mock) -> None:
+    mock_mistral.return_value.embeddings.create.return_value = MagicMock(
+        data=[MagicMock(embedding=[1.0], index=0), MagicMock(embedding=[2.0], index=1)]
+    )
+    embedder = MistralAIEmbeddings()
+    assert await embedder.async_embed_documents(["a", "b"]) == [[1.0], [2.0]]

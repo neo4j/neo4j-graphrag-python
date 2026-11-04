@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import Any, Optional
 
@@ -84,6 +85,54 @@ class MistralAIEmbeddings(Embedder):
             raise EmbeddingsGenerationError("Embedding is not a list of floats.")
 
         return embedding
+
+    def embed_documents(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
+        """
+        Generate embeddings for several texts in a single Mistral AI request.
+
+        Args:
+            texts (list[str]): The texts to generate embeddings for.
+            **kwargs (Any): Additional keyword arguments to pass to the Mistral AI client.
+
+        Returns:
+            list[list[float]]: One embedding per text, in input order.
+        """
+        if not texts:
+            return []
+        return self._embed_group(texts, **kwargs)
+
+    async def async_embed_documents(
+        self, texts: list[str], **kwargs: Any
+    ) -> list[list[float]]:
+        """Asynchronous version of :meth:`embed_documents`, run in a worker
+        thread so concurrent groups do not block the event loop."""
+        return await asyncio.to_thread(self.embed_documents, texts, **kwargs)
+
+    @rate_limit_handler
+    def _embed_group(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
+        try:
+            response = self.mistral_client.embeddings.create(
+                model=self.model, inputs=texts, **kwargs
+            )
+        except Exception as e:
+            raise EmbeddingsGenerationError(
+                f"Failed to generate embeddings with MistralAI: {e}"
+            ) from e
+
+        if response is None or not response.data:
+            raise EmbeddingsGenerationError("Failed to retrieve embeddings.")
+        data = sorted(
+            response.data,
+            key=lambda item: item.index if item.index is not None else 0,
+        )
+        if len(data) != len(texts):
+            raise EmbeddingsGenerationError(
+                f"MistralAI returned {len(data)} embeddings for {len(texts)} inputs."
+            )
+        embeddings = [item.embedding for item in data]
+        if not all(isinstance(e, list) for e in embeddings):
+            raise EmbeddingsGenerationError("Embedding is not a list of floats.")
+        return embeddings  # type: ignore[return-value]
 
     @property
     def embedding_model_name(self) -> str:

@@ -23,6 +23,16 @@ from neo4j_graphrag.utils.rate_limit import (
 )
 
 
+def _split_into_groups(texts: list[str], size: Optional[int]) -> list[list[str]]:
+    """Split ``texts`` into consecutive groups of at most ``size`` items.
+
+    ``None`` means no limit, so all texts end up in a single group.
+    """
+    if size is None or len(texts) <= size:
+        return [texts] if texts else []
+    return [texts[i : i + size] for i in range(0, len(texts), size)]
+
+
 class Embedder(ABC):
     """
     Interface for embedding models.
@@ -59,6 +69,37 @@ class Embedder(ABC):
             list[float]: A vector embedding.
         """
         return self.embed_query(text)
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed several texts.
+
+        The default implementation calls :meth:`embed_query` once per text.
+        Embedders whose provider accepts a list of inputs in a single request
+        override it to send one request per group of texts instead.
+
+        Args:
+            texts (list[str]): Texts to convert to vector embeddings.
+
+        Returns:
+            list[list[float]]: One vector embedding per input text, in the
+            same order as ``texts``.
+        """
+        return [self.embed_query(text) for text in texts]
+
+    async def async_embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Asynchronously embed several texts.
+
+        The default implementation awaits :meth:`async_embed_query` once per
+        text.
+
+        Args:
+            texts (list[str]): Texts to convert to vector embeddings.
+
+        Returns:
+            list[list[float]]: One vector embedding per input text, in the
+            same order as ``texts``.
+        """
+        return [await self.async_embed_query(text) for text in texts]
 
     @property
     def embedding_model_name(self) -> str:

@@ -94,6 +94,7 @@ class SimpleKGPipeline:
         perform_entity_resolution (bool): Merge entities with same label and name. Default: True
         prompt_template (str): A custom prompt template to use for extraction.
         lexical_graph_config (Optional[LexicalGraphConfig], optional): Lexical graph configuration to customize node labels and relationship types in the lexical graph.
+        embedding_batch_size (Optional[int]): If set, chunk embeddings are computed in groups of this many chunks per embedder request (see :class:`~neo4j_graphrag.components.embedder.TextChunkEmbedder`). Default: None, one request per chunk.
     """
 
     def __init__(
@@ -122,6 +123,7 @@ class SimpleKGPipeline:
         perform_entity_resolution: bool = True,
         lexical_graph_config: Optional[LexicalGraphConfig] = None,
         neo4j_database: Optional[str] = None,
+        embedding_batch_size: Optional[int] = None,
     ):
         if from_pdf is not None:
             warnings.warn(
@@ -165,6 +167,7 @@ class SimpleKGPipeline:
                     perform_entity_resolution=perform_entity_resolution,
                     lexical_graph_config=lexical_graph_config,
                     neo4j_database=neo4j_database,
+                    embedding_batch_size=embedding_batch_size,
                 )
             )
         except (ValidationError, ValueError) as e:

@@ -105,6 +105,58 @@ class OllamaEmbeddings(Embedder):
 
         return embedding
 
+    @rate_limit_handler
+    def embed_documents(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
+        """
+        Generate embeddings for several texts in a single Ollama ``embed`` call.
+
+        Args:
+            texts (list[str]): The texts to generate embeddings for.
+            **kwargs (Any): Additional keyword arguments to pass to the Ollama client.
+
+        Returns:
+            list[list[float]]: One embedding per text, in input order.
+        """
+        if not texts:
+            return []
+        response = self.client.embed(model=self.model, input=texts, **kwargs)
+        return self._check_embeddings(response, len(texts))
+
+    @async_rate_limit_handler
+    async def async_embed_documents(
+        self, texts: list[str], **kwargs: Any
+    ) -> list[list[float]]:
+        """
+        Asynchronously generate embeddings for several texts in a single
+        Ollama ``embed`` call.
+
+        Args:
+            texts (list[str]): The texts to generate embeddings for.
+            **kwargs (Any): Additional keyword arguments to pass to the Ollama client.
+
+        Returns:
+            list[list[float]]: One embedding per text, in input order.
+        """
+        if not texts:
+            return []
+        response = await self.async_client.embed(
+            model=self.model, input=texts, **kwargs
+        )
+        return self._check_embeddings(response, len(texts))
+
+    @staticmethod
+    def _check_embeddings(response: Any, expected: int) -> list[list[float]]:
+        if response is None or not response.embeddings:
+            raise EmbeddingsGenerationError("Failed to retrieve embeddings.")
+        embeddings = list(response.embeddings)
+        if len(embeddings) != expected:
+            raise EmbeddingsGenerationError(
+                f"Ollama returned {len(embeddings)} embeddings for {expected} inputs."
+            )
+        if not all(isinstance(e, list) for e in embeddings):
+            raise EmbeddingsGenerationError("Embedding is not a list of floats.")
+        return embeddings
+
     @property
     def embedding_model_name(self) -> str:
         return self.model

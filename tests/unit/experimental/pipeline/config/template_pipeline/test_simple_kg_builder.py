@@ -169,6 +169,19 @@ def test_simple_kg_pipeline_config_chunk_embedder(
     chunk_embedder = config._get_chunk_embedder()
     assert isinstance(chunk_embedder, TextChunkEmbedder)
     assert chunk_embedder._embedder == embedder
+    assert chunk_embedder.batch_size is None
+
+
+@patch(
+    "neo4j_graphrag.experimental.pipeline.config.template_pipeline.simple_kg_builder.SimpleKGPipelineConfig.get_default_embedder"
+)
+def test_simple_kg_pipeline_config_chunk_embedder_batch_size(
+    mock_embedder: Mock, embedder: Embedder
+) -> None:
+    mock_embedder.return_value = embedder
+    config = SimpleKGPipelineConfig(embedding_batch_size=64)
+    chunk_embedder = config._get_chunk_embedder()
+    assert chunk_embedder.batch_size == 64
 
 
 @patch(

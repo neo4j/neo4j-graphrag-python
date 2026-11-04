@@ -16,9 +16,10 @@
 from __future__ import annotations
 
 import abc
+import asyncio
 from typing import TYPE_CHECKING, Any, Optional
 
-from neo4j_graphrag.embeddings.base import Embedder
+from neo4j_graphrag.embeddings.base import Embedder, _split_into_groups
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 from neo4j_graphrag.utils.rate_limit import RateLimitHandler, rate_limit_handler
 
@@ -32,6 +33,10 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
     """
 
     client: openai.OpenAI
+
+    #: Maximum number of inputs sent in one embeddings request. The OpenAI
+    #: embeddings endpoint accepts at most 2,048 inputs per request.
+    max_inputs_per_request: int = 2048
 
     def __init__(
         self,
@@ -78,6 +83,53 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
             raise EmbeddingsGenerationError(
                 f"Failed to generate embedding with OpenAI: {e}"
             ) from e
+
+    def embed_documents(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
+        """
+        Generate embeddings for several texts, sending them to OpenAI in groups
+        of at most ``max_inputs_per_request`` inputs per request instead of one
+        request per text.
+
+        Args:
+            texts (list[str]): The texts to generate embeddings for.
+            **kwargs (Any): Additional arguments to pass to the OpenAI embedding generation function.
+
+        Returns:
+            list[list[float]]: One embedding per text, in input order.
+        """
+        embeddings: list[list[float]] = []
+        for group in _split_into_groups(texts, self.max_inputs_per_request):
+            embeddings.extend(self._embed_group(group, **kwargs))
+        return embeddings
+
+    async def async_embed_documents(
+        self, texts: list[str], **kwargs: Any
+    ) -> list[list[float]]:
+        """
+        Asynchronous version of :meth:`embed_documents`. The blocking client
+        call runs in a worker thread so that concurrent groups (for example in
+        ``TextChunkEmbedder``) do not block the event loop.
+        """
+        return await asyncio.to_thread(self.embed_documents, texts, **kwargs)
+
+    @rate_limit_handler
+    def _embed_group(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
+        try:
+            response = self.client.embeddings.create(
+                input=texts, model=self.model, **kwargs
+            )
+        except Exception as e:
+            raise EmbeddingsGenerationError(
+                f"Failed to generate embeddings with OpenAI: {e}"
+            ) from e
+        # OpenAI tags every embedding with the position of its input; sort on it
+        # rather than relying on the response order.
+        data = sorted(response.data, key=lambda item: item.index)
+        if len(data) != len(texts):
+            raise EmbeddingsGenerationError(
+                f"OpenAI returned {len(data)} embeddings for {len(texts)} inputs."
+            )
+        return [list(item.embedding) for item in data]
 
     @property
     def embedding_model_name(self) -> str:

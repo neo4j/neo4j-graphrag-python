@@ -168,3 +168,128 @@ def test_openai_embedding_model_name_is_string(mock_import: Mock) -> None:
     embedder = OpenAIEmbeddings(api_key="my key")
     assert isinstance(embedder.embedding_model_name, str)
     assert embedder.embedding_model_name == "text-embedding-ada-002"
+
+
+def _openai_response(vectors: list[list[float]], indexes: list[int]) -> MagicMock:
+    return MagicMock(
+        data=[MagicMock(embedding=v, index=i) for v, i in zip(vectors, indexes)]
+    )
+
+
+@patch("builtins.__import__")
+def test_openai_embed_documents_single_request(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    create = mock_openai.OpenAI.return_value.embeddings.create
+    # out-of-order response: results must be mapped back by index
+    create.return_value = _openai_response([[2.0], [1.0], [3.0]], [1, 0, 2])
+    embedder = OpenAIEmbeddings(model="text-embedding-3-small")
+    res = embedder.embed_documents(["a", "b", "c"], dimensions=1)
+    assert res == [[1.0], [2.0], [3.0]]
+    create.assert_called_once_with(
+        input=["a", "b", "c"], model="text-embedding-3-small", dimensions=1
+    )
+
+
+@patch("builtins.__import__")
+def test_openai_embed_documents_splits_at_request_limit(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    create = mock_openai.OpenAI.return_value.embeddings.create
+
+    def fake_create(input: list[str], model: str) -> MagicMock:
+        return _openai_response([[float(t)] for t in input], list(range(len(input))))
+
+    create.side_effect = fake_create
+    embedder = OpenAIEmbeddings()
+    embedder.max_inputs_per_request = 2
+    res = embedder.embed_documents(["1", "2", "3", "4", "5"])
+    assert res == [[1.0], [2.0], [3.0], [4.0], [5.0]]
+    assert [c.kwargs["input"] for c in create.call_args_list] == [
+        ["1", "2"],
+        ["3", "4"],
+        ["5"],
+    ]
+
+
+@patch("builtins.__import__")
+def test_openai_embed_documents_empty(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    embedder = OpenAIEmbeddings()
+    assert embedder.embed_documents([]) == []
+    mock_openai.OpenAI.return_value.embeddings.create.assert_not_called()
+
+
+@patch("builtins.__import__")
+def test_openai_embed_documents_count_mismatch(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    mock_openai.OpenAI.return_value.embeddings.create.return_value = _openai_response(
+        [[1.0]], [0]
+    )
+    embedder = OpenAIEmbeddings()
+    with pytest.raises(EmbeddingsGenerationError, match="1 embeddings for 2 inputs"):
+        embedder.embed_documents(["a", "b"])
+
+
+@patch("builtins.__import__")
+def test_openai_embed_documents_rate_limit_retries_only_failed_group(
+    mock_import: Mock,
+) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    create = mock_openai.OpenAI.return_value.embeddings.create
+    create.side_effect = [
+        _openai_response([[1.0]], [0]),
+        Exception("Error code: 429 - Too many requests"),
+        _openai_response([[2.0]], [0]),
+    ]
+    embedder = OpenAIEmbeddings()
+    embedder.max_inputs_per_request = 1
+    with patch("time.sleep"):
+        res = embedder.embed_documents(["a", "b"])
+    assert res == [[1.0], [2.0]]
+    assert [c.kwargs["input"] for c in create.call_args_list] == [["a"], ["b"], ["b"]]
+
+
+@patch("builtins.__import__")
+def test_openai_embed_documents_api_error(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    mock_openai.OpenAI.return_value.embeddings.create.side_effect = Exception(
+        "API Error"
+    )
+    embedder = OpenAIEmbeddings()
+    with pytest.raises(
+        EmbeddingsGenerationError, match="Failed to generate embeddings with OpenAI"
+    ):
+        embedder.embed_documents(["a"])
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_openai_async_embed_documents(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    mock_openai.OpenAI.return_value.embeddings.create.return_value = _openai_response(
+        [[1.0], [2.0]], [0, 1]
+    )
+    embedder = OpenAIEmbeddings()
+    assert await embedder.async_embed_documents(["a", "b"]) == [[1.0], [2.0]]
+
+
+@patch("builtins.__import__")
+def test_azure_openai_embed_documents(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+    create = mock_openai.AzureOpenAI.return_value.embeddings.create
+    create.return_value = _openai_response([[1.0], [2.0]], [0, 1])
+    embedder = AzureOpenAIEmbeddings(
+        model="text-embedding-3-small",
+        azure_endpoint="https://test.openai.azure.com/",
+        api_key="my_key",
+        api_version="2024-02-01",
+    )
+    assert embedder.embed_documents(["a", "b"]) == [[1.0], [2.0]]
+    create.assert_called_once_with(input=["a", "b"], model="text-embedding-3-small")

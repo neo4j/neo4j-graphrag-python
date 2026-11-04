@@ -14,9 +14,10 @@
 #  limitations under the License.
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Optional
 
-from neo4j_graphrag.embeddings.base import Embedder
+from neo4j_graphrag.embeddings.base import Embedder, _split_into_groups
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 from neo4j_graphrag.utils.rate_limit import RateLimitHandler, rate_limit_handler
 
@@ -27,6 +28,10 @@ except ImportError:
 
 
 class CohereEmbeddings(Embedder):
+    #: Maximum number of texts sent in one embed request. Cohere's embed
+    #: endpoint accepts at most 96 texts per call.
+    max_inputs_per_request: int = 96
+
     def __init__(
         self,
         model: str = "",
@@ -87,6 +92,39 @@ class CohereEmbeddings(Embedder):
             raise EmbeddingsGenerationError(
                 f"Failed to generate embedding with Cohere: {e}"
             ) from e
+
+    def embed_documents(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
+        """Embed several texts, sending at most ``max_inputs_per_request``
+        texts per Cohere request. Uses the instance ``input_type`` unless one
+        is passed explicitly.
+        """
+        embeddings: list[list[float]] = []
+        for group in _split_into_groups(texts, self.max_inputs_per_request):
+            embeddings.extend(self._embed_group(group, **kwargs))
+        return embeddings
+
+    async def async_embed_documents(
+        self, texts: list[str], **kwargs: Any
+    ) -> list[list[float]]:
+        """Asynchronous version of :meth:`embed_documents`, run in a worker
+        thread so concurrent groups do not block the event loop."""
+        return await asyncio.to_thread(self.embed_documents, texts, **kwargs)
+
+    @rate_limit_handler
+    def _embed_group(self, texts: list[str], **kwargs: Any) -> list[list[float]]:
+        try:
+            kwargs.setdefault("input_type", self.input_type)
+            response = self.client.embed(texts=texts, model=self.model, **kwargs)
+            embeddings = [list(e) for e in response.embeddings]
+        except Exception as e:
+            raise EmbeddingsGenerationError(
+                f"Failed to generate embeddings with Cohere: {e}"
+            ) from e
+        if len(embeddings) != len(texts):
+            raise EmbeddingsGenerationError(
+                f"Cohere returned {len(embeddings)} embeddings for {len(texts)} inputs."
+            )
+        return embeddings
 
     @property
     def embedding_model_name(self) -> str:

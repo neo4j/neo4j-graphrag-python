@@ -4,6 +4,9 @@
 
 ### Added
 
+- `Embedder.embed_documents` and `Embedder.async_embed_documents` embed a list of texts. The default implementation calls `embed_query` once per text; `OpenAIEmbeddings`, `AzureOpenAIEmbeddings`, `CohereEmbeddings`, `MistralAIEmbeddings`, `OllamaEmbeddings` and `SentenceTransformerEmbeddings` send several texts per provider request.
+- `TextChunkEmbedder` has a new `batch_size` parameter (and `SimpleKGPipeline` / `SimpleKGPipelineConfig` a matching `embedding_batch_size`) to embed chunks in groups with `async_embed_documents` instead of one request per chunk. Defaults to `None`, which keeps the previous behaviour.
+
 - Embedders now have a `embedding_model_name` property that defaults to an empty string and must be implemented for subclasses for the real model name to be properly saved in the database.
 - Chunk node metadata now contains `embedding_model_name` which is saved as a new property on Chunk nodes in Neo4j.
 

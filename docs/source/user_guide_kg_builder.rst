@@ -190,6 +190,20 @@ To write to a non-default Neo4j database, specify the database name using this p
         # ...
     )
 
+Batched Chunk Embeddings
+------------------------
+
+By default, each chunk is embedded with its own embedder request. To embed several
+chunks per request instead, set ``embedding_batch_size`` (see :ref:`chunk-embedder-batching`):
+
+.. code:: python
+
+    kg_builder = SimpleKGPipeline(
+        # ...
+        embedding_batch_size=100,
+        # ...
+    )
+
 Structured Output
 -----------------
 
@@ -710,6 +724,29 @@ Example usage:
 
 
 If OpenAI is not an option, see :ref:`embedders` to learn how to use other supported embedders.
+
+.. _chunk-embedder-batching:
+
+Batching chunk embeddings
+-------------------------
+
+By default, `TextChunkEmbedder` sends one embedder request per chunk. Most embedding
+APIs accept several inputs per request, so for large documents it is much faster to
+embed chunks in groups with the `batch_size` parameter:
+
+.. code:: python
+
+    text_chunk_embedder = TextChunkEmbedder(
+        embedder=OpenAIEmbeddings(), batch_size=100, max_concurrency=5
+    )
+
+Each group is embedded with a single `Embedder.async_embed_documents` call, and up to
+`max_concurrency` groups are in flight at a time. `OpenAIEmbeddings`, `AzureOpenAIEmbeddings`,
+`CohereEmbeddings`, `MistralAIEmbeddings`, `OllamaEmbeddings` and
+`SentenceTransformerEmbeddings` send each group as one request (OpenAI and Cohere
+split groups above their per-request input limits, 2,048 and 96 inputs). Other
+embedders fall back to one `embed_query` call per text, so the results are the same either way.
+Keep in mind that providers also limit the number of tokens per request.
 
 The embeddings are added to each chunk metadata, and will be saved as a Chunk node property in the graph if
 `create_lexical_graph` is enabled in the `EntityRelationExtractor` (keep reading). Similarly, the

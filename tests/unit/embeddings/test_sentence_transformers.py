@@ -82,3 +82,50 @@ def test_embedding_model_name_is_tring(mock_import: Mock) -> None:
     instance = SentenceTransformerEmbeddings(model="paraphrase-MiniLM-L3-v2 ")
     assert isinstance(instance.embedding_model_name, str)
     assert instance.embedding_model_name == "paraphrase-MiniLM-L3-v2 "
+
+
+@patch("builtins.__import__")
+def test_embed_documents_single_encode_call(mock_import: Mock) -> None:
+    MockSentenceTransformer = get_mock_sentence_transformers()
+    mock_import.return_value = MockSentenceTransformer
+    mock_model = MockSentenceTransformer.SentenceTransformer.return_value
+    mock_model.encode.return_value = np.array([[0.1, 0.2], [0.3, 0.4]])
+
+    instance = SentenceTransformerEmbeddings()
+    result = instance.embed_documents(["a", "b"])
+
+    mock_model.encode.assert_called_once_with(["a", "b"])
+    assert result == [[0.1, 0.2], [0.3, 0.4]]
+
+
+@patch("builtins.__import__")
+def test_embed_documents_list_of_tensors(mock_import: Mock) -> None:
+    MockSentenceTransformer = get_mock_sentence_transformers()
+    mock_import.return_value = MockSentenceTransformer
+    mock_model = MockSentenceTransformer.SentenceTransformer.return_value
+    mock_model.encode.return_value = [
+        torch.tensor([1.0, 2.0]),
+        torch.tensor([3.0, 4.0]),
+    ]
+
+    instance = SentenceTransformerEmbeddings()
+    assert instance.embed_documents(["a", "b"]) == [[1.0, 2.0], [3.0, 4.0]]
+
+
+@patch("builtins.__import__")
+def test_embed_documents_empty_and_errors(mock_import: Mock) -> None:
+    MockSentenceTransformer = get_mock_sentence_transformers()
+    mock_import.return_value = MockSentenceTransformer
+    mock_model = MockSentenceTransformer.SentenceTransformer.return_value
+    instance = SentenceTransformerEmbeddings()
+
+    assert instance.embed_documents([]) == []
+    mock_model.encode.assert_not_called()
+
+    mock_model.encode.return_value = np.array([[0.1, 0.2]])
+    with pytest.raises(EmbeddingsGenerationError, match="1 embeddings for 2 inputs"):
+        instance.embed_documents(["a", "b"])
+
+    mock_model.encode.return_value = "unexpected"
+    with pytest.raises(EmbeddingsGenerationError):
+        instance.embed_documents(["a"])
