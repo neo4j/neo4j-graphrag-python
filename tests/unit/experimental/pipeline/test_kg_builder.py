@@ -268,3 +268,22 @@ async def test_knowledge_graph_builder_with_lexical_graph_config(_: Mock) -> Non
         assert pipe_inputs["extractor"]["lexical_graph_config"] == lexical_graph_config
         assert pipe_inputs["extractor"]["document_info"] is not None
         assert pipe_inputs["extractor"]["document_info"]["path"] == "document.txt"
+
+
+@mock.patch(
+    "neo4j_graphrag.components.kg_writer.get_version",
+    return_value=((5, 23, 0), False, False),
+)
+@pytest.mark.parametrize("batch_size", [None, 32])
+def test_knowledge_graph_builder_embedding_batch_size(
+    _: Mock, batch_size: int | None
+) -> None:
+    kg_builder = SimpleKGPipeline(
+        llm=MagicMock(spec=LLMInterface),
+        driver=MagicMock(spec=neo4j.Driver),
+        embedder=MagicMock(spec=Embedder),
+        from_file=False,
+        embedding_batch_size=batch_size,
+    )
+    chunk_embedder = kg_builder.runner.pipeline._nodes["chunk_embedder"].component
+    assert chunk_embedder.batch_size == batch_size  # type: ignore[attr-defined]

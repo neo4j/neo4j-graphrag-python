@@ -130,6 +130,7 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
     perform_entity_resolution: bool = True
     lexical_graph_config: Optional[LexicalGraphConfig] = None
     neo4j_database: Optional[str] = None
+    embedding_batch_size: Optional[int] = None
 
     file_loader: Optional[ComponentType] = None
     pdf_loader: Optional[ComponentType] = Field(
@@ -245,7 +246,10 @@ class SimpleKGPipelineConfig(TemplatePipelineConfig):
         return {}
 
     def _get_chunk_embedder(self) -> TextChunkEmbedder:
-        return TextChunkEmbedder(embedder=self.get_default_embedder())
+        return TextChunkEmbedder(
+            embedder=self.get_default_embedder(),
+            batch_size=self.embedding_batch_size,
+        )
 
     def _get_schema(self) -> BaseSchemaBuilder:
         """

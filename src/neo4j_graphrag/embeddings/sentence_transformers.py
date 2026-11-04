@@ -62,6 +62,31 @@ class SentenceTransformerEmbeddings(Embedder):
                 f"Failed to generate embedding with SentenceTransformer: {e}"
             ) from e
 
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """Embed several texts with a single ``SentenceTransformer.encode``
+        call, so the model processes them in batches instead of one by one."""
+        if not texts:
+            return []
+        try:
+            result = self.model.encode(texts)
+            if isinstance(result, (self.torch.Tensor, self.np.ndarray)):
+                embeddings = [row.flatten().tolist() for row in result]
+            elif isinstance(result, list) and all(
+                isinstance(x, self.torch.Tensor) for x in result
+            ):
+                embeddings = [tensor.flatten().tolist() for tensor in result]
+            else:
+                raise ValueError("Unexpected return type from model encoding")
+        except Exception as e:
+            raise EmbeddingsGenerationError(
+                f"Failed to generate embeddings with SentenceTransformer: {e}"
+            ) from e
+        if len(embeddings) != len(texts):
+            raise EmbeddingsGenerationError(
+                f"SentenceTransformer returned {len(embeddings)} embeddings for {len(texts)} inputs."
+            )
+        return embeddings
+
     @property
     def embedding_model_name(self) -> str:
         return self._model_name
