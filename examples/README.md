@@ -30,6 +30,8 @@ are listed in [the last section of this file](#customize).
 - [Hybrid retriever](./retrieve/hybrid_retriever.py)
 - [Hybrid Cypher retriever](./retrieve/hybrid_cypher_retriever.py)
 - [Text2Cypher retriever](./retrieve/text2cypher_search.py)
+- [Decision walk retriever](./retrieve/decision_walk_retriever.py)
+- [Decision walk or Text2Cypher, chosen per question with the ToolsRetriever](./retrieve/tools/decision_walk_or_text2cypher_example.py)
 - [Cypher Template retriever](./retrieve/tools/cypher_template_to_tool_example.py)
 
 
