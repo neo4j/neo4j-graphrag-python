@@ -107,6 +107,8 @@ dev = [
 
 [tool.uv]
 exclude-newer = "2026-09-18T00:00:00Z"
+# ollama>=0.6.3 (required by the `ollama` extra) was published after the cutoff.
+exclude-newer-package = { ollama = "2026-09-30T00:00:00Z" }
 # `gpu` provides CUDA torch where the torch-carrying extras provide CPU
 # torch; the two must never be resolved into the same environment, so the
 # extras are declared mutually exclusive. This is what lets the lockfile
