@@ -326,3 +326,43 @@ def test_cohere_llm_constructs_against_the_real_sdk() -> None:
     )
     assert result.returncode == 0, result.stderr
     assert "ok" in result.stdout
+
+
+def test_cohere_llm_invoke_passes_model_params(mock_cohere: Mock) -> None:
+    chat_response_mock = MagicMock()
+    chat_response_mock.message.content = [MagicMock(text="cohere response text")]
+    mock_chat = mock_cohere.ClientV2.return_value.chat
+    mock_chat.return_value = chat_response_mock
+    llm = CohereLLM(
+        model_name="something", model_params={"temperature": 0.1, "max_tokens": 50}
+    )
+
+    llm.invoke("my text")
+    llm.invoke([{"role": "user", "content": "my text"}])
+
+    assert mock_chat.call_count == 2
+    for call in mock_chat.call_args_list:
+        assert call.kwargs["temperature"] == 0.1
+        assert call.kwargs["max_tokens"] == 50
+        assert call.kwargs["model"] == "something"
+
+
+@pytest.mark.asyncio
+async def test_cohere_llm_ainvoke_passes_model_params(mock_cohere: Mock) -> None:
+    chat_response_mock = MagicMock(
+        message=MagicMock(content=[MagicMock(text="cohere response text")])
+    )
+    mock_chat = AsyncMock(return_value=chat_response_mock)
+    mock_cohere.AsyncClientV2.return_value.chat = mock_chat
+    llm = CohereLLM(
+        model_name="something", model_params={"temperature": 0.1, "max_tokens": 50}
+    )
+
+    await llm.ainvoke("my text")
+    await llm.ainvoke([{"role": "user", "content": "my text"}])
+
+    assert mock_chat.call_count == 2
+    for call in mock_chat.call_args_list:
+        assert call.kwargs["temperature"] == 0.1
+        assert call.kwargs["max_tokens"] == 50
+        assert call.kwargs["model"] == "something"
