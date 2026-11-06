@@ -178,6 +178,7 @@ class CohereLLM(LLMBase):
             res = self.client.chat(
                 messages=messages,
                 model=self.model_name,
+                **self.model_params,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
@@ -229,6 +230,7 @@ class CohereLLM(LLMBase):
             res = self.client.chat(
                 messages=messages,
                 model=self.model_name,
+                **self.model_params,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError("Error calling cohere") from e
@@ -286,6 +288,7 @@ class CohereLLM(LLMBase):
             res = await self.async_client.chat(
                 messages=messages,
                 model=self.model_name,
+                **self.model_params,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
@@ -328,6 +331,7 @@ class CohereLLM(LLMBase):
             res = await self.async_client.chat(
                 messages=messages,
                 model=self.model_name,
+                **self.model_params,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError("Error calling cohere") from e

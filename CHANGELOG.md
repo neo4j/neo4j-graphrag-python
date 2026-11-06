@@ -9,6 +9,10 @@
 - Chunk node metadata now contains `embedding_model_name` which is saved as a new property on Chunk nodes in Neo4j.
 
 
+### Fixed
+
+- `CohereLLM` now passes `model_params` (e.g. `temperature`, `max_tokens`) to the Cohere chat API in `invoke` and `ainvoke`; they were previously ignored.
+
 ## 1.23.0
 
 ### Changed
