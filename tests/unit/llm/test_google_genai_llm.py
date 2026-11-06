@@ -62,6 +62,11 @@ def test_gemini_llm_missing_dependency() -> None:
         assert "Could not import google-genai python client" in str(exc.value)
 
 
+def test_gemini_llm_default_model_name(mock_genai: Tuple[MagicMock, MagicMock]) -> None:
+    llm = GeminiLLM()
+    assert llm.model_name == "gemini-3.8-flash"
+
+
 def test_gemini_invoke_happy_path(mock_genai: Tuple[MagicMock, MagicMock]) -> None:
     mock_gen, _ = mock_genai
     mock_client = mock_gen.Client.return_value
