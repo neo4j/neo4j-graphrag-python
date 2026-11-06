@@ -29,7 +29,10 @@ from neo4j_graphrag.llm.types import ToolCallResponse
 from neo4j_graphrag.llm.vertexai_llm import VertexAILLM
 from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
-from neo4j_graphrag.utils.rate_limit import NoOpRateLimitHandler
+from neo4j_graphrag.utils.rate_limit import (
+    NoOpRateLimitHandler,
+    RetryRateLimitHandler,
+)
 
 from pydantic import BaseModel, ConfigDict
 
@@ -334,6 +337,60 @@ async def test_vertexai_acall_llm_with_tools(mock_model: Mock, test_tool: Tool) 
         system_instruction=None,
     )
     assert isinstance(res, GenerationResponse)
+
+
+def _fast_retry_handler() -> RetryRateLimitHandler:
+    return RetryRateLimitHandler(max_attempts=3, min_wait=0, max_wait=0, jitter=False)
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._parse_tool_response")
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._call_llm")
+def test_vertexai_invoke_with_tools_retries_when_error_is_wrapped(
+    mock_call_llm: Mock, mock_parse_tool: Mock, test_tool: Tool
+) -> None:
+    mock_call_llm.side_effect = [
+        LLMGenerationError("429 Resource exhausted"),
+        MagicMock(),
+    ]
+    mock_parse_tool.return_value = ToolCallResponse(tool_calls=[])
+
+    llm = VertexAILLM(model_name="gemini", rate_limit_handler=_fast_retry_handler())
+    res = llm.invoke_with_tools("my text", [test_tool])
+
+    assert mock_call_llm.call_count == 2
+    assert isinstance(res, ToolCallResponse)
+
+
+@pytest.mark.asyncio
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._parse_tool_response")
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._acall_llm")
+async def test_vertexai_ainvoke_with_tools_retries_when_error_is_wrapped(
+    mock_acall_llm: AsyncMock, mock_parse_tool: Mock, test_tool: Tool
+) -> None:
+    mock_acall_llm.side_effect = [
+        LLMGenerationError("429 Resource exhausted"),
+        MagicMock(),
+    ]
+    mock_parse_tool.return_value = ToolCallResponse(tool_calls=[])
+
+    llm = VertexAILLM(model_name="gemini", rate_limit_handler=_fast_retry_handler())
+    res = await llm.ainvoke_with_tools("my text", [test_tool])
+
+    assert mock_acall_llm.call_count == 2
+    assert isinstance(res, ToolCallResponse)
+
+
+@patch("neo4j_graphrag.llm.vertexai_llm.VertexAILLM._call_llm")
+def test_vertexai_invoke_with_tools_does_not_retry_other_errors(
+    mock_call_llm: Mock, test_tool: Tool
+) -> None:
+    mock_call_llm.side_effect = LLMGenerationError("400 Invalid argument")
+
+    llm = VertexAILLM(model_name="gemini", rate_limit_handler=_fast_retry_handler())
+    with pytest.raises(LLMGenerationError):
+        llm.invoke_with_tools("my text", [test_tool])
+
+    assert mock_call_llm.call_count == 1
 
 
 # LLM Interface V2 Tests

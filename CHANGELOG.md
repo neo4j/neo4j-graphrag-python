@@ -8,6 +8,9 @@
 - Embedders now have a `embedding_model_name` property that defaults to an empty string and must be implemented for subclasses for the real model name to be properly saved in the database.
 - Chunk node metadata now contains `embedding_model_name` which is saved as a new property on Chunk nodes in Neo4j.
 
+### Fixed
+
+- `BedrockLLM` and `GeminiLLM` `invoke_with_tools` / `ainvoke_with_tools` now go through the rate limit handler, like `invoke` / `ainvoke`, so a 429 or throttling response is retried instead of failing immediately. `VertexAILLM`'s tool methods go through the handler as well, for parity with its `invoke` / `ainvoke`.
 
 ## 1.23.0
 
