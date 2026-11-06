@@ -22,6 +22,7 @@ import asyncio
 import os
 
 import neo4j
+
 from neo4j_graphrag.components.kg_writer import KGWriter, Neo4jWriter
 from neo4j_graphrag.components.text_splitters.fixed_size_splitter import (
     FixedSizeSplitter,
@@ -33,7 +34,9 @@ TEXT = (
     "Alice works at Acme. Bob works at Initech. Carol lives in Paris. "
     "Dave works at Acme and knows Alice."
 )
-
+NEO4J_URI = os.getenv("NEO4J_URI")
+NEO4J_USERNAME = os.getenv("NEO4J_USERNAME", "neo4j")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "password")
 
 # Stage 1: splitting. Configured through the component's own constructor.
 splitter = FixedSizeSplitter(chunk_size=40, chunk_overlap=0, approximate=True)
@@ -102,11 +105,8 @@ def run_pipeline(sink: Sink[Neo4jGraph]) -> None:
     )
 
 
-if uri := os.getenv("NEO4J_URI"):
-    auth = (
-        os.getenv("NEO4J_USERNAME", "neo4j"),
-        os.getenv("NEO4J_PASSWORD", "password"),
-    )
+if uri := NEO4J_URI:
+    auth = (NEO4J_USERNAME, NEO4J_PASSWORD)
     with neo4j.GraphDatabase.driver(uri, auth=auth) as driver:
         run_pipeline(KGWriterSink(Neo4jWriter(driver=driver, clean_db=False)))
 else:
