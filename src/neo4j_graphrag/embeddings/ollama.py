@@ -104,3 +104,7 @@ class OllamaEmbeddings(Embedder):
             raise EmbeddingsGenerationError("Embedding is not a list of floats.")
 
         return embedding
+
+    @property
+    def embedding_model_name(self) -> str:
+        return self.model

@@ -161,3 +161,10 @@ def test_openai_embedder_rate_limit_error_eventual_success(mock_import: Mock) ->
     assert result == [1.0, 2.0]
     # Verify the API was called 3 times before succeeding
     assert mock_embeddings.call_count == 3
+
+
+@patch("builtins.__import__")
+def test_openai_embedding_model_name_is_string(mock_import: Mock) -> None:
+    embedder = OpenAIEmbeddings(api_key="my key")
+    assert isinstance(embedder.embedding_model_name, str)
+    assert embedder.embedding_model_name == "text-embedding-ada-002"

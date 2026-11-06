@@ -92,3 +92,12 @@ def test_vertexai_embedder_rate_limit_error_eventual_success(
     assert result == [1.0, 2.0]
     # Verify the API was called 3 times before succeeding
     assert mock_embeddings.call_count == 3
+
+
+@patch("neo4j_graphrag.embeddings.vertexai.TextEmbeddingModel")
+def test_vertexai_embedding_model_name_is_string(
+    mock_vertexai: Mock,
+) -> None:
+    embedder = VertexAIEmbeddings()
+    assert isinstance(embedder.embedding_model_name, str)
+    assert embedder.embedding_model_name == "text-embedding-004"

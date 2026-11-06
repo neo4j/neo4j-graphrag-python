@@ -15,7 +15,7 @@
 
 [project]
 name = "neo4j-graphrag"
-version = "1.22.0"
+version = "1.23.0"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
 authors = [
     {name = "Neo4j, Inc", email = "team-gen-ai@neo4j.com"}
@@ -106,9 +106,10 @@ dev = [
 ]
 
 [tool.uv]
-exclude-newer = "2026-09-18T00:00:00Z"
-# ollama>=0.6.3 (required by the `ollama` extra) was published after the cutoff.
-exclude-newer-package = { ollama = "2026-09-30T00:00:00Z" }
+# Keep in sync with `minimumReleaseAge` in renovate.json: if Renovate proposes
+# a release younger than this window, it cannot update uv.lock.
+exclude-newer = "1 week"
+exclude-newer-package = { certifi = false }
 # `gpu` provides CUDA torch where the torch-carrying extras provide CPU
 # torch; the two must never be resolved into the same environment, so the
 # extras are declared mutually exclusive. This is what lets the lockfile

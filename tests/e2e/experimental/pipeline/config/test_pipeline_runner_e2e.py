@@ -136,6 +136,7 @@ async def test_simple_kg_pipeline_from_json_config(
             [1.0, 2.0],
         ]
     )
+    mock_embedder.return_value.embedding_model_name = ""
 
     os.environ["NEO4J_URI"] = "neo4j://localhost:7687"
     os.environ["NEO4J_USER"] = "neo4j"
@@ -193,6 +194,7 @@ async def test_simple_kg_pipeline_from_json_config_with_markdown(
             [1.0, 2.0],
         ]
     )
+    mock_embedder.return_value.embedding_model_name = ""
 
     os.environ["NEO4J_URI"] = "neo4j://localhost:7687"
     os.environ["NEO4J_USER"] = "neo4j"
@@ -244,6 +246,7 @@ async def test_simple_kg_pipeline_from_yaml_config(
             [1.0, 2.0],
         ]
     )
+    mock_embedder.return_value.embedding_model_name = ""
 
     os.environ["NEO4J_URI"] = "neo4j://localhost:7687"
     os.environ["NEO4J_USER"] = "neo4j"
@@ -287,6 +290,7 @@ async def test_simple_kg_pipeline_from_yaml_config_with_markdown(
             [1.0, 2.0],
         ]
     )
+    mock_embedder.return_value.embedding_model_name = ""
 
     os.environ["NEO4J_URI"] = "neo4j://localhost:7687"
     os.environ["NEO4J_USER"] = "neo4j"

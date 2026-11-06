@@ -12,6 +12,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}
   cancel-in-progress: true
 
+# Fail fast if uv.lock is out of sync with pyproject.toml, instead of silently
+# installing a stale lock (--frozen) or re-resolving on the fly.
+env:
+  UV_LOCKED: "1"
+
 jobs:
   e2e-tests:
     runs-on: ubuntu-latest
@@ -91,7 +96,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Set up uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
       # Split the combined cache action into restore here and a gated save
       # below: the combined action's post step also ran when the job failed or
       # was cancelled, publishing a half-installed .venv under an exact key
@@ -106,7 +111,7 @@ jobs:
       # be trusted, and the failure surfaces much later as an ImportError inside
       # a test. uv sync is quick when the environment is already correct.
       - name: Install dependencies
-        run: uv sync --frozen --all-extras --no-extra gpu --group dev
+        run: uv sync --all-extras --no-extra gpu --group dev
       - name: Save cached venv
         if: steps.cached-venv.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

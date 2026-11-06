@@ -102,3 +102,7 @@ class GeminiEmbedder(Embedder):
             raise EmbeddingsGenerationError(
                 f"Failed to generate embedding with Gemini: {e}"
             ) from e
+
+    @property
+    def embedding_model_name(self) -> str:
+        return self.model
