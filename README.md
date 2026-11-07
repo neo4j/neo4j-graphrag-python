@@ -68,6 +68,7 @@ the pip extra dependencies described below:
     - **anthropic**: LLMs from Anthropic
     - **mistralai**: LLMs from MistralAI
     - **bedrock**: LLMs from Amazon Bedrock
+- **openrouter**: decision models from OpenRouter, used by the `DecisionWalkRetriever`
 - **sentence-transformers** : to use embeddings from the `sentence-transformers` Python package
 - Vector database (to use :ref:`External Retrievers`):
     - **weaviate**: store vectors in Weaviate

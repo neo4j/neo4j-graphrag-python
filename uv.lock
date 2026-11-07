@@ -3245,6 +3245,9 @@ ollama = [
 openai = [
     { name = "openai" },
 ]
+openrouter = [
+    { name = "httpx" },
+]
 pinecone = [
     { name = "pinecone-client" },
 ]
@@ -3282,6 +3285,7 @@ requires-dist = [
     { name = "fsspec", specifier = ">=2024.12.0,<2027.0.0" },
     { name = "google-cloud-aiplatform", marker = "extra == 'google'", specifier = ">=1.66.0,<2.0.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = ">=1.62.0,<3.0.0" },
+    { name = "httpx", marker = "extra == 'openrouter'", specifier = ">=0.27.0,<1.0.0" },
     { name = "json-repair", specifier = ">=0.44.1,<1.0.0" },
     { name = "langchain-huggingface", marker = "extra == 'examples'", specifier = ">=0.1.0,<2.0.0" },
     { name = "langchain-openai", marker = "extra == 'examples'", specifier = ">=0.2.2,<2.0.0" },
@@ -3320,7 +3324,7 @@ requires-dist = [
     { name = "types-pyyaml", specifier = ">=6.0.12.20260906,<7.0.0" },
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.6.1,<5.0.0" },
 ]
-provides-extras = ["weaviate", "pinecone", "google", "google-genai", "cohere", "anthropic", "bedrock", "ollama", "openai", "mistralai", "litellm", "qdrant", "kg-creation-tools", "sentence-transformers", "gpu", "experimental", "examples", "nlp", "fuzzy-matching"]
+provides-extras = ["weaviate", "pinecone", "google", "google-genai", "cohere", "anthropic", "bedrock", "ollama", "openai", "openrouter", "mistralai", "litellm", "qdrant", "kg-creation-tools", "sentence-transformers", "gpu", "experimental", "examples", "nlp", "fuzzy-matching"]
 
 [package.metadata.requires-dev]
 dev = [
