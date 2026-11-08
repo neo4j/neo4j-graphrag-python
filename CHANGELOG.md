@@ -8,6 +8,10 @@
 - Embedders now have a `embedding_model_name` property that defaults to an empty string and must be implemented for subclasses for the real model name to be properly saved in the database.
 - Chunk node metadata now contains `embedding_model_name` which is saved as a new property on Chunk nodes in Neo4j.
 
+### Changed
+
+- `get_structured_schema` calls `apoc.meta.data` once instead of three times and splits the rows in Python. With `sample=-1` this removes two full graph scans. The returned schema is unchanged.
+
 
 ## 1.23.0
 
