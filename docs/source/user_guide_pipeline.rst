@@ -10,6 +10,13 @@ This page provides information about how to create a pipeline.
 
     Pipelines run asynchronously, see examples below.
 
+.. note::
+
+    This page describes the component-based pipeline used by `SimpleKGPipeline`.
+    For the lazily-evaluated dataflow pipeline (`neo4j_graphrag.pipeline.Pipeline`,
+    built with `map`, `filter`, `flat_map`, ...), see the minimal
+    `dataflow pipeline examples <https://github.com/neo4j/neo4j-graphrag-python/blob/main/examples/pipeline/>`_.
+
 
 *******************
 Creating Components

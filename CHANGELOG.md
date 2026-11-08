@@ -2,6 +2,15 @@
 
 ## Next
 
+### Added
+
+- Minimal examples of the new dataflow pipeline (`neo4j_graphrag.pipeline.Pipeline`) in `examples/pipeline/`, showing modularity, stage configuration, error handling and composition of knowledge-graph components.
+- Embedders now have a `embedding_model_name` property that defaults to an empty string and must be implemented for subclasses for the real model name to be properly saved in the database.
+- Chunk node metadata now contains `embedding_model_name` which is saved as a new property on Chunk nodes in Neo4j.
+
+
+## 1.23.0
+
 ### Changed
 
 - `SchemaExtractionTemplate` now tells the model to define each node type once. A node label is global and carries one property and constraint set.
@@ -10,6 +19,7 @@
 ### Fixed
 
 - `FixedSizeSplitter` now rejects negative `chunk_overlap` values, which could silently skip characters between chunks.
+- Parquet export no longer appends synthetic `KEY(__id__)` when a label already has a semantic KEY (including composite-only KEYs). `__id__` is still written as a normal column and still used for relationship `from`/`to` when there is no single-property KEY; `KEY(__id__)` is emitted only for keyless labels. When joins use `__id__` under a semantic KEY, export metadata adds `UNIQUENESS(__id__)` instead so Data Importer node-reference validation (DANG-023) passes without a second KEY (Neo4j 22N41 on re-import).
 - Fixed `Neo4jWriter` ignoring `neo4j_database` during setup and cleanup, ensuring the temporary-ID index is created and temporary IDs are removed in the configured database.
 - Parquet writes no longer fail when a `LIST` property mixes element types across rows or inside one list (for example `["1998"]` and `[1998]`). `Neo4jGraphParquetFormatter._normalize_column_types` stringifies those elements. Uniform lists and int/float lists are left unchanged, so numeric lists still promote to `list<float32>`. Node and relationship files share this path.
 - Experimental: LLM-auto-generated schemas now reconcile duplicate `node_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. Direct `GraphSchema` construction rejects remaining duplicate node labels with a clear error instead of a last-write-wins index that could report an undefined constraint property. This reflects that Neo4j node labels are global per name.

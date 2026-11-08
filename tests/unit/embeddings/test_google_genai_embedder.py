@@ -18,6 +18,8 @@ from typing import Generator, Tuple
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+
+from neo4j_graphrag.embeddings.google_genai import DEFAULT_EMBEDDING_MODEL
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 from neo4j_graphrag.embeddings import GeminiEmbedder
 
@@ -86,3 +88,11 @@ def test_gemini_embed_query_error(mock_genai: Tuple[MagicMock, MagicMock]) -> No
     embedder = GeminiEmbedder()
     with pytest.raises(EmbeddingsGenerationError):
         embedder.embed_query("hello")
+
+
+def test_gemini_embedding_model_name_is_string(
+    mock_genai: Tuple[MagicMock, MagicMock],
+) -> None:
+    embedder = GeminiEmbedder()
+    assert isinstance(embedder.embedding_model_name, str)
+    assert embedder.embedding_model_name == DEFAULT_EMBEDDING_MODEL

@@ -143,8 +143,11 @@ class KGWriterModel(DataModel):
               ``is_primary_key``, and ``is_unique`` (KEY / synthetic ``__id__`` / ``from``/``to``
               vs UNIQUENESS constraints per :class:`~neo4j_graphrag.components.schema.GraphSchema`).
               Node files include a ``constraints`` list with ``KEY``, ``UNIQUENESS``, and node-scoped
-              ``EXISTENCE`` entries (grouped ``properties`` lists), plus at least one single-property
-              ``KEY`` (``__id__`` is injected when the schema has none). Node files whose
+              ``EXISTENCE`` entries (grouped ``properties`` lists). A synthetic single-property
+              ``KEY`` on ``__id__`` is injected only when the schema has no KEY for that label.
+              When a semantic KEY exists but relationship joins still use ``__id__``
+              (composite-only KEY), a synthetic ``UNIQUENESS`` on ``__id__`` is added instead
+              so Data Importer join validation passes without a second KEY. Node files whose
               source ``Neo4jNode.embedding_properties`` contain one or more keys also include
               an ``indexes`` list: one ``VECTOR`` entry per embedding property
               (``properties``: ``[name]``, ``dimensions``: inferred from the first non-empty

@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from neo4j_graphrag.embeddings.bedrock import BedrockEmbeddings
+from neo4j_graphrag.embeddings.bedrock import BedrockEmbeddings, DEFAULT_MODEL_ID
 from neo4j_graphrag.exceptions import EmbeddingsGenerationError
 
 
@@ -146,3 +146,9 @@ def test_bedrock_embed_query_empty_response(mock_boto3: MagicMock) -> None:
         EmbeddingsGenerationError, match="Failed to generate embedding with Bedrock"
     ):
         embedder.embed_query("hello")
+
+
+def test_bedrock_embedding_property_name_is_string(mock_boto3: MagicMock) -> None:
+    embedder = BedrockEmbeddings()
+    assert isinstance(embedder.embedding_model_name, str)
+    assert embedder.embedding_model_name == DEFAULT_MODEL_ID

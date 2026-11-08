@@ -13,10 +13,12 @@ jobs:
         with:
           token: ${{ secrets.GIT_PUSH_PAT }}
       - name: Set up uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
 
       - name: Bump version
-        run: uv version --bump alpha --frozen
+        run: uv version --bump alpha --no-sync
+      - name: Check uv.lock is in sync
+        run: uv lock --check
 
       - name: Get version
         id: get-version
@@ -27,10 +29,10 @@ jobs:
       - name: Update CHANGELOG.md (cross platform supported)
         run: |
           sed -i.bak -e 's/## Next/## Next\n\n## ${{ steps.get-version.outputs.version }}/' CHANGELOG.md && rm CHANGELOG.md.bak
-      - uses: EndBug/add-and-commit@290ea2c423ad77ca9c62ae0f5b224379612c0321 # v10.0.0
+      - uses: EndBug/add-and-commit@cc9c08ba6c8df3b93a8f2db63e89b98368ae2ae8 # v11.1.1
         with:
           author_name: 'Neo4j-GraphRAG GitHub Action'
           author_email: 'team-gen-ai@neo4j.com'
           message: 'Bump version to ${{ steps.get-version.outputs.version }}'
-          add: "['pyproject.toml', 'CHANGELOG.md']"
+          add: "['pyproject.toml', 'uv.lock', 'CHANGELOG.md']"
           tag: '${{ steps.get-version.outputs.version }}'
