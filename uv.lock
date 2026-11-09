@@ -3296,7 +3296,7 @@ requires-dist = [
     { name = "numpy", marker = "python_full_version >= '3.13' and python_full_version < '3.15'", specifier = ">=2.1.0,<3.0.0" },
     { name = "ollama", marker = "extra == 'ollama'", specifier = ">=0.6.3,<0.7.0" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.51.1,<4.0.0" },
-    { name = "pinecone-client", marker = "extra == 'pinecone'", specifier = ">=4.1.0,<5.0.0" },
+    { name = "pinecone-client", marker = "extra == 'pinecone'", specifier = ">=6.0.0,<6.1.0" },
     { name = "pyarrow", marker = "extra == 'experimental'", specifier = ">=20.0.0" },
     { name = "pydantic", specifier = ">=2.6.3,<3.0.0" },
     { name = "pypdf", specifier = ">=6.19.0,<7.0.0" },
@@ -4026,18 +4026,18 @@ wheels = [
 
 [[package]]
 name = "pinecone-client"
-version = "4.1.2"
+version = "6.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "certifi" },
     { name = "pinecone-plugin-interface" },
-    { name = "tqdm" },
+    { name = "python-dateutil" },
     { name = "typing-extensions" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/06/c9/6d8fcd1f3a8447baa28860b33e50f585c1e95748a8109fa2fabc0b0e473c/pinecone_client-4.1.2.tar.gz", hash = "sha256:fa89c605792ec94de36d4c9585250b47b0b643407457053eca89008424be6281", size = 113210, upload-time = "2024-07-03T19:31:50.934Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/ab/3ab3b81e8ad82fbfcaa4f446c7f962b18968d61543c8c9e2c38bd777c056/pinecone_client-6.0.0.tar.gz", hash = "sha256:f224fc999205e4858c4737c40922bdf42d178b361c8859bc486ec00d45b359a9", size = 7004, upload-time = "2025-02-21T19:47:38.899Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2d/c5/c47bb8ce4e1238e291ec04d48d5e7b660da4355923e9178d581abea97bfa/pinecone_client-4.1.2-py3-none-any.whl", hash = "sha256:3d69cbbca2d9d4f77c90bad59a1194e3d20d535b29f277eee32b439fd526546b", size = 216432, upload-time = "2024-07-03T19:31:48.585Z" },
+    { url = "https://files.pythonhosted.org/packages/5a/e4/7780cd631dc6dad0172a245e958b41b28a70779594c0790fa08b952aa97f/pinecone_client-6.0.0-py3-none-any.whl", hash = "sha256:d81a9e73cae441e4ab6dfc9c1d8b51c9895dae2488cda64f3e21b9dfc10c8d94", size = 6654, upload-time = "2025-02-21T19:47:37.23Z" },
 ]
 
 [[package]]
