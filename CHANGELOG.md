@@ -2,6 +2,8 @@
 
 ## Next
 
+## 1.24.0
+
 ### Added
 
 - Minimal examples of the new dataflow pipeline (`neo4j_graphrag.pipeline.Pipeline`) in `examples/pipeline/`, showing modularity, stage configuration, error handling and composition of knowledge-graph components.
