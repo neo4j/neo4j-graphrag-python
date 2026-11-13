@@ -2380,7 +2380,7 @@ wheels = [
 
 [[package]]
 name = "langchain-core"
-version = "0.3.81"
+version = "1.2.22"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonpatch" },
@@ -2390,40 +2390,39 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tenacity" },
     { name = "typing-extensions" },
+    { name = "uuid-utils" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/63/7c/381a347292db3df93601ec8a5ff043a03ca1e2b1b210a94307390b9fbbba/langchain_core-0.3.81.tar.gz", hash = "sha256:0473e7cffbba06017393f2f1ee116da098c298e4ec478ada91d321f42dff921c", size = 594574, upload-time = "2025-12-23T01:02:28.321Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b1/a3/c4cd6827a1df46c821e7214b7f7b7a28b189e6c9b84ef15c6d629c5e3179/langchain_core-1.2.22.tar.gz", hash = "sha256:8d8f726d03d3652d403da915126626bb6250747e8ba406537d849e68b9f5d058", size = 842487, upload-time = "2026-03-24T18:48:44.9Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/29/60802a71c4a0b573c0e9ecda1846404b04bdbc9bc805732b39261be4c376/langchain_core-0.3.81-py3-none-any.whl", hash = "sha256:d0f34c88254d78ccb1b9a038f860d13dea90186045026fd8fc3e1265eed73a4e", size = 457175, upload-time = "2025-12-23T01:02:27.008Z" },
+    { url = "https://files.pythonhosted.org/packages/c7/a6/2ffacf0f1a3788f250e75d0b52a24896c413be11be3a6d42bcdf46fbea48/langchain_core-1.2.22-py3-none-any.whl", hash = "sha256:7e30d586b75918e828833b9ec1efc25465723566845dd652c277baf751e9c04b", size = 506829, upload-time = "2026-03-24T18:48:43.286Z" },
 ]
 
 [[package]]
 name = "langchain-huggingface"
-version = "0.1.2"
+version = "1.2.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
     { name = "langchain-core" },
-    { name = "sentence-transformers" },
     { name = "tokenizers" },
-    { name = "transformers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/a1/0f/8277d993d5307f06523e72c9bc8a505ed028f7b1c1e5276d8e89044b6036/langchain_huggingface-0.1.2.tar.gz", hash = "sha256:4a66d5c449298fd353bd84c9ed01f9bf4303bf2e4ffce14aab8c55c584eee57c", size = 16129, upload-time = "2024-10-31T18:56:53.894Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/42/5b/4910551367de5c6ec246616fcc0ddb0bc6f9e5d353d4a22dcb5ab1f87e60/langchain_huggingface-1.2.1.tar.gz", hash = "sha256:33d52a30a56775380c6b4321b78136a410eb079132a80fe7120ddd4b954b4efa", size = 253106, upload-time = "2026-03-02T18:44:39.163Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/9d/f8/77a303ddc492f6eed8bf0979f2bc6db4fa6eb1089c5e9f0f977dd87bc9c2/langchain_huggingface-0.1.2-py3-none-any.whl", hash = "sha256:7de5cfcae32bfb6a99c084fc16176f02583a4f8d94febb6bb45bed5b34699174", size = 21251, upload-time = "2024-10-31T18:56:52.21Z" },
+    { url = "https://files.pythonhosted.org/packages/bc/90/a1440bfa467a6dd9025ad80f3c239554de28aec49dacfb369fda92871556/langchain_huggingface-1.2.1-py3-none-any.whl", hash = "sha256:0930c216a457d2c8dc7b39a756c39c567f1d88593bfee2c3441f3ae718435f0f", size = 30924, upload-time = "2026-03-02T18:44:37.745Z" },
 ]
 
 [[package]]
 name = "langchain-openai"
-version = "0.3.35"
+version = "1.1.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain-core" },
     { name = "openai" },
     { name = "tiktoken" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fb/96/06d0d25a37e05a0ff2d918f0a4b0bf0732aed6a43b472b0b68426ce04ef8/langchain_openai-0.3.35.tar.gz", hash = "sha256:fa985fd041c3809da256a040c98e8a43e91c6d165b96dcfeb770d8bd457bf76f", size = 786635, upload-time = "2025-10-06T15:09:28.463Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cc/fd/7dee16e882c4c1577d48db174d85aa3a0ee09ba61eb6a5d41650285ca80c/langchain_openai-1.1.12.tar.gz", hash = "sha256:ccf5ef02c896f6807b4d0e51aaf678a72ce81ae41201cae8d65e11eeff9ecb79", size = 1114119, upload-time = "2026-03-23T18:59:19.211Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/d5/c90c5478215c20ee71d8feaf676f7ffd78d0568f8c98bd83f81ce7562ed7/langchain_openai-0.3.35-py3-none-any.whl", hash = "sha256:76d5707e6e81fd461d33964ad618bd326cb661a1975cef7c1cb0703576bdada5", size = 75952, upload-time = "2025-10-06T15:09:27.137Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/a6/68fb22e3604015e6f546fa1d3677d24378b482855ae74710cbf4aec44132/langchain_openai-1.1.12-py3-none-any.whl", hash = "sha256:da71ca3f2d18c16f7a2443cc306aa195ad2a07054335ac9b0626dcae02b6a0c5", size = 88487, upload-time = "2026-03-23T18:59:17.978Z" },
 ]
 
 [[package]]
@@ -2677,7 +2676,7 @@ name = "markdown-it-py"
 version = "4.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "mdurl" },
+    { name = "mdurl", marker = "python_full_version < '3.14' or extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5b/f5/4ec618ed16cc4f8fb3b701563655a69816155e79e24a17b651541804721d/markdown_it_py-4.0.0.tar.gz", hash = "sha256:cb0a2b4aa34f932c007117b194e945bd74e0ec24133ceb5bac59009cda1cb9f3", size = 73070, upload-time = "2025-08-11T12:57:52.854Z" }
 wheels = [
@@ -5039,8 +5038,8 @@ name = "rich"
 version = "14.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "markdown-it-py" },
-    { name = "pygments" },
+    { name = "markdown-it-py", marker = "python_full_version < '3.14' or extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "pygments", marker = "python_full_version < '3.14' or extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/fb/d2/8920e102050a0de7bfabeb4c4614a49248cf8d5d7a8d01885fbb24dc767a/rich-14.2.0.tar.gz", hash = "sha256:73ff50c7c0c1c77c8243079283f4edb376f0f6442433aecb8ce7e6d0b92d1fe4", size = 219990, upload-time = "2025-10-09T14:16:53.064Z" }
 wheels = [
@@ -5440,10 +5439,10 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "joblib" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" } },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" } },
-    { name = "threadpoolctl" },
+    { name = "joblib", marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "threadpoolctl", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/98/c2/a7855e41c9d285dfe86dc50b250978105dce513d6e459ea66a6aeb0e1e0c/scikit_learn-1.7.2.tar.gz", hash = "sha256:20e9e49ecd130598f1ca38a1d85090e1a600147b9c02fa6f15d69cb53d968fda", size = 7193136, upload-time = "2025-09-09T08:21:29.075Z" }
 wheels = [
@@ -5494,10 +5493,10 @@ resolution-markers = [
     "python_full_version == '3.11.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "joblib" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" } },
-    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" } },
-    { name = "threadpoolctl" },
+    { name = "joblib", marker = "python_full_version >= '3.11'" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "threadpoolctl", marker = "python_full_version >= '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0e/d4/40988bf3b8e34feec1d0e6a051446b1f66225f8529b9309becaeef62b6c4/scikit_learn-1.8.0.tar.gz", hash = "sha256:9bccbb3b40e3de10351f8f5068e105d0f4083b1a65fa07b6634fbc401a6287fd", size = 7335585, upload-time = "2025-12-10T07:08:53.618Z" }
 wheels = [
@@ -5686,15 +5685,15 @@ version = "6.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scikit-learn", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "scikit-learn", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "tokenizers" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin'" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "torch", version = "2.14.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "tqdm" },
     { name = "transformers" },
@@ -6607,8 +6606,8 @@ version = "5.15.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "packaging" },
     { name = "pyyaml" },
     { name = "regex" },
@@ -6655,10 +6654,10 @@ name = "typer"
 version = "0.21.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "rich" },
-    { name = "shellingham" },
-    { name = "typing-extensions" },
+    { name = "click", marker = "python_full_version < '3.14' or extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "rich", marker = "python_full_version < '3.14' or extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "shellingham", marker = "python_full_version < '3.14' or extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.14' or extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/36/bf/8825b5929afd84d0dabd606c67cd57b8388cb3ec385f7ef19c5cc2202069/typer-0.21.1.tar.gz", hash = "sha256:ea835607cd752343b6b2b7ce676893e5a0324082268b48f27aa058bdb7d2145d", size = 110371, upload-time = "2026-01-06T11:21:10.989Z" }
 wheels = [
