@@ -255,6 +255,7 @@ class BedrockLLM(LLMInterface, LLMInterfaceV2):
         except Exception as e:
             raise LLMGenerationError(f"Error calling BedrockLLM: {e}") from e
 
+    @rate_limit_handler_decorator
     def invoke_with_tools(
         self,
         input: str,

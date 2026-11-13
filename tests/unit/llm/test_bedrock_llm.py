@@ -21,7 +21,9 @@ import pytest
 
 from neo4j_graphrag.exceptions import LLMGenerationError
 from neo4j_graphrag.llm import BedrockLLM
+from neo4j_graphrag.tool import Tool
 from neo4j_graphrag.types import LLMMessage
+from neo4j_graphrag.utils.rate_limit import RetryRateLimitHandler
 
 
 @pytest.fixture
@@ -196,3 +198,73 @@ def test_bedrock_invoke_with_model_params(mock_boto3: MagicMock) -> None:
 
     call_kwargs = mock_client.converse.call_args[1]
     assert call_kwargs["inferenceConfig"] == {"temperature": 0.5, "maxTokens": 512}
+
+
+def _make_tool_response() -> dict[str, Any]:
+    return {
+        "output": {
+            "message": {
+                "role": "assistant",
+                "content": [{"toolUse": {"name": "test_tool", "input": {"param1": "x"}}}],
+            }
+        }
+    }
+
+
+def _fast_retry_handler() -> RetryRateLimitHandler:
+    return RetryRateLimitHandler(max_attempts=3, min_wait=0, max_wait=0, jitter=False)
+
+
+def test_bedrock_invoke_with_tools_retries_on_throttling(
+    mock_boto3: MagicMock, test_tool: Tool
+) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.side_effect = [
+        Exception("ThrottlingException: Too many requests, please wait"),
+        _make_tool_response(),
+    ]
+
+    llm = BedrockLLM(
+        "us.anthropic.claude-sonnet-4-20250514-v1:0",
+        rate_limit_handler=_fast_retry_handler(),
+    )
+    response = llm.invoke_with_tools("hello", [test_tool])
+
+    assert mock_client.converse.call_count == 2
+    assert response.tool_calls[0].name == "test_tool"
+
+
+@pytest.mark.asyncio
+async def test_bedrock_ainvoke_with_tools_retries_on_throttling(
+    mock_boto3: MagicMock, test_tool: Tool
+) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.side_effect = [
+        Exception("ThrottlingException: Too many requests, please wait"),
+        _make_tool_response(),
+    ]
+
+    llm = BedrockLLM(
+        "us.anthropic.claude-sonnet-4-20250514-v1:0",
+        rate_limit_handler=_fast_retry_handler(),
+    )
+    response = await llm.ainvoke_with_tools("hello", [test_tool])
+
+    assert mock_client.converse.call_count == 2
+    assert response.tool_calls[0].name == "test_tool"
+
+
+def test_bedrock_invoke_with_tools_does_not_retry_other_errors(
+    mock_boto3: MagicMock, test_tool: Tool
+) -> None:
+    mock_client = mock_boto3.client.return_value
+    mock_client.converse.side_effect = Exception("ValidationException: bad request")
+
+    llm = BedrockLLM(
+        "us.anthropic.claude-sonnet-4-20250514-v1:0",
+        rate_limit_handler=_fast_retry_handler(),
+    )
+    with pytest.raises(LLMGenerationError):
+        llm.invoke_with_tools("hello", [test_tool])
+
+    assert mock_client.converse.call_count == 1
