@@ -262,7 +262,7 @@ class OllamaLLM(LLMBase):
             response = await self.async_client.chat(
                 model=self.model_name,
                 messages=self.get_messages(input, message_history, system_instruction),
-                options=self.model_params,
+                **self.model_params,
             )
             content = response.message.content or ""
             usage = None
@@ -308,11 +308,11 @@ class OllamaLLM(LLMBase):
                 "OllamaLLM does not currently support structured output"
             )
         try:
-            params = {**self.model_params, **kwargs}
             response = await self.async_client.chat(
                 model=self.model_name,
                 messages=self.get_messages_v2(input),
-                options=params,
+                **self.model_params,
+                **kwargs,
             )
             content = response.message.content or ""
             usage = None

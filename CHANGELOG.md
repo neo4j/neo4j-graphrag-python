@@ -11,6 +11,10 @@
 - Chunk node metadata now contains `embedding_model_name` which is saved as a new property on Chunk nodes in Neo4j.
 
 
+### Fixed
+
+- `OllamaLLM.ainvoke` no longer wraps `model_params` in a second `options` key, so `options` (e.g. `temperature`) and other chat arguments (`format`, `keep_alive`) now reach Ollama as in `invoke`.
+
 ## 1.23.0
 
 ### Changed
