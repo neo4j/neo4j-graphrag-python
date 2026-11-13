@@ -104,6 +104,18 @@ class Text2CypherRetrievalError(Neo4jGraphRagError):
     pass
 
 
+class DecisionModelError(Neo4jGraphRagError):
+    """Exception raised when a decision model call fails or returns an invalid choice."""
+
+    pass
+
+
+class DecisionWalkRetrievalError(Neo4jGraphRagError):
+    """Exception raised when a decision walk cannot be run."""
+
+    pass
+
+
 class SchemaFetchError(Neo4jGraphRagError):
     """Exception raised when a Neo4jSchema cannot be fetched."""
 
