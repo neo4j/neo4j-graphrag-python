@@ -179,6 +179,13 @@ class TestSupportsSearchClause:
             ("2025.12.0", False),
             ("5.23.0", False),
             ("5.26.0", False),
+            # Aura kept the 5.x version scheme after on-prem moved to
+            # year-based versions; the Aura March release line (5.27-aura+)
+            # GA'd the Cypher 25 SEARCH clause for vector queries (#601).
+            ("5.27-aura", True),
+            ("5.28-aura", True),
+            ("5.26.0-aura", False),
+            ("5.27.0", False),
         ],
     )
     def test_version_check(
