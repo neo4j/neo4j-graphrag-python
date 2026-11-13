@@ -653,10 +653,11 @@ def test_vertexai_llm_default_model_matches_docstring(
 ) -> None:
     """The default must be a model Vertex still serves.
 
-    The previous default, gemini-1.5-flash-001, was retired, so VertexAILLM()
-    with no explicit model failed with a 404 for everyone. Pinning it here keeps
+    The previous defaults, gemini-1.5-flash-001 and gemini-2.5-flash, were
+    retired, so VertexAILLM() with no explicit model failed with a 404 for
+    everyone. Pinning it here keeps
     the signature and the documented default from drifting apart again.
     """
     llm = VertexAILLM()
-    assert llm.model_name == "gemini-2.5-flash"
-    assert 'Defaults to "gemini-2.5-flash"' in (VertexAILLM.__doc__ or "")
+    assert llm.model_name == "gemini-3.8-flash"
+    assert 'Defaults to "gemini-3.8-flash"' in (VertexAILLM.__doc__ or "")
