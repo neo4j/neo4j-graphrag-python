@@ -4,9 +4,14 @@ using OpenAI models and API.
 
 from neo4j_graphrag.embeddings import OpenAIEmbeddings
 
-# set api key here on in the OPENAI_API_KEY env var
+# set api key here or in the OPENAI_API_KEY env var
 api_key = None
+dimensions = 1536
 
-embeder = OpenAIEmbeddings(model="text-embedding-ada-002", api_key=api_key)
-res = embeder.embed_query("my question")
+embedder = OpenAIEmbeddings(
+    model="text-embedding-3-large",
+    dimensions=dimensions,
+    api_key=api_key,
+)
+res = embedder.embed_query("my question")
 print(res[:10])
