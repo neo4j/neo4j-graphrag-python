@@ -67,7 +67,7 @@ experimental component-graph pipeline used by `SimpleKGPipeline`). See also the
 
 ## Answer: GraphRAG
 
-- [End to end GraphRAG](./answer/graphrag.py)
+- [End to end GraphRAG](./question_answering/graphrag.py)
 - [GraphRAG with message history](./question_answering/graphrag_with_message_history.py)
 - [GraphRAG with Neo4j message history](./question_answering/graphrag_with_neo4j_message_history.py)
 
@@ -138,7 +138,7 @@ experimental component-graph pipeline used by `SimpleKGPipeline`). See also the
 - [Chunk embedder]()
 - Schema Builder:
   - [User-defined](./customize/build_graph/components/schema_builders/schema.py)
-  - [Automatic schema extraction](./automatic_schema_extraction/schema_from_text.py)
+  - [Automatic schema extraction](./build_graph/automatic_schema_extraction/simple_kg_builder_schema_from_text.py)
 - Entity Relation Extractor:
   - [LLM-based](./customize/build_graph/components/extractors/llm_entity_relation_extractor.py)
   - [LLM-based with custom prompt](./customize/build_graph/components/extractors/llm_entity_relation_extractor_with_custom_prompt.py)
@@ -164,5 +164,5 @@ experimental component-graph pipeline used by `SimpleKGPipeline`). See also the
 ## Database Operations
 
 - [Create vector index](database_operations/create_vector_index.py)
-- [Create full text index](create_fulltext_index.py)
-- [Populate vector index](populate_vector_index.py)
+- [Create full text index](database_operations/create_fulltext_index.py)
+- [Populate vector index](database_operations/populate_vector_index.py)
