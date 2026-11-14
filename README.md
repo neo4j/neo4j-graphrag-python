@@ -68,6 +68,7 @@ the pip extra dependencies described below:
     - **anthropic**: LLMs from Anthropic
     - **mistralai**: LLMs from MistralAI
     - **bedrock**: LLMs from Amazon Bedrock
+- **voyageai**: embeddings from Voyage AI
 - **sentence-transformers** : to use embeddings from the `sentence-transformers` Python package
 - Vector database (to use :ref:`External Retrievers`):
     - **weaviate**: store vectors in Weaviate

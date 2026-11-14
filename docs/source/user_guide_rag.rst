@@ -658,6 +658,8 @@ Currently, this package supports the following embedders:
 - :ref:`vertexaiembeddings`
 - :ref:`mistralaiembeddings`
 - :ref:`cohereembeddings`
+- :ref:`voyageaiembeddings`
+- :ref:`voyageaicontextualizedembeddings`
 - :ref:`azureopenaiembeddings`
 - :ref:`ollamaembeddings`
 
@@ -668,6 +670,33 @@ The `OpenAIEmbeddings` was illustrated previously. Here is how to use the `Sente
     from neo4j_graphrag.embeddings import SentenceTransformerEmbeddings
 
     embedder = SentenceTransformerEmbeddings(model="all-MiniLM-L6-v2")  # Note: this is the default model
+
+
+`VoyageAIEmbeddings` has no default model: it must be one of the supported Voyage AI models.
+Use ``input_type="document"`` (default) when indexing and ``input_type="query"`` for the
+retrieval side, with an optional Matryoshka ``output_dimension``. The key is read from the
+``VOYAGE_API_KEY`` environment variable:
+
+.. code:: python
+
+    from neo4j_graphrag.embeddings import VoyageAIEmbeddings
+
+    indexer = VoyageAIEmbeddings(model="voyage-4", output_dimension=512)
+    searcher = VoyageAIEmbeddings(model="voyage-4", output_dimension=512, input_type="query")
+    vectors = indexer.embed_documents(["first text", "second text"])  # batched by tokens
+
+`VoyageAIContextualizedEmbeddings` (``voyage-context-4`` or ``voyage-context-3``) embeds each chunk
+with the context of its whole document. Pass one string per document to `embed_documents`; the
+documents are chunked by the API and the chunk texts are returned with the vectors:
+
+.. code:: python
+
+    from neo4j_graphrag.embeddings import VoyageAIContextualizedEmbeddings
+
+    embedder = VoyageAIContextualizedEmbeddings(model="voyage-context-4")
+    documents = embedder.embed_documents(["First document...", "Second document..."])
+    documents[0].chunks, documents[0].embeddings
+    query_vector = embedder.embed_query("my question")
 
 
 If another embedder is desired, a custom embedder can be created, using the `Embedder` interface.

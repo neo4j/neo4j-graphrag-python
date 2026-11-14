@@ -2,6 +2,10 @@
 
 ## Next
 
+### Added
+
+- `VoyageAIEmbeddings` and `VoyageAIContextualizedEmbeddings`, built on the official `voyageai` client (new `voyageai` extra). The model is always explicit: text embeddings accept `voyage-4-large`, `voyage-4`, `voyage-4-lite`, `voyage-code-4`, `voyage-3-large`, `voyage-3.5`, `voyage-3.5-lite`, `voyage-code-3`, `voyage-finance-2` and `voyage-law-2`, with an optional Matryoshka `output_dimension`; contextualized embeddings accept `voyage-context-4` and `voyage-context-3`, and `embed_documents` returns the chunk texts together with the vectors (automatic chunking, `chunk_size=32000`). `embed_documents` batches by tokens: requests stay within 1000 inputs and the combined token ceiling of the model (120K, 320K or 1M; none documented for `voyage-code-4`; 120K for contextualized documents), counted with the tokenizer of the `voyageai` client (downloaded from the Hugging Face Hub on first use). The API key is read from `VOYAGE_API_KEY` unless `api_key` is passed.
+
 ## 1.24.0
 
 ### Added

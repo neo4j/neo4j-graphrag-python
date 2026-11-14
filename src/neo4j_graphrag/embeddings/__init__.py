@@ -33,6 +33,8 @@ _LAZY_EXPORTS: dict[str, str] = {
     "OpenAIEmbeddings": ".openai",
     "SentenceTransformerEmbeddings": ".sentence_transformers",
     "VertexAIEmbeddings": ".vertexai",
+    "VoyageAIEmbeddings": ".voyageai",
+    "VoyageAIContextualizedEmbeddings": ".voyageai",
 }
 
 if TYPE_CHECKING:
@@ -46,6 +48,7 @@ if TYPE_CHECKING:
     from .openai import AzureOpenAIEmbeddings, OpenAIEmbeddings
     from .sentence_transformers import SentenceTransformerEmbeddings
     from .vertexai import VertexAIEmbeddings
+    from .voyageai import VoyageAIContextualizedEmbeddings, VoyageAIEmbeddings
 
 __all__ = [
     "Embedder",
@@ -58,6 +61,8 @@ __all__ = [
     "MistralAIEmbeddings",
     "CohereEmbeddings",
     "GeminiEmbedder",
+    "VoyageAIEmbeddings",
+    "VoyageAIContextualizedEmbeddings",
 ]
 
 
