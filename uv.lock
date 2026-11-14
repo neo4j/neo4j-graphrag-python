@@ -176,6 +176,16 @@ wheels = [
 ]
 
 [[package]]
+name = "aiolimiter"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/26/60/0d16f90083a2f0ae9421d11ad98287f7942414f091ae9ad318389a764f85/aiolimiter-1.3.0.tar.gz", hash = "sha256:7343008c2228e89def7d4ce29ab98ee98822bf5db69018c09c90088929f7c104", size = 10051, upload-time = "2026-09-07T14:40:27.876Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/56/d8/9237b1d29e561bd37ffe9487ea1a4551d2df2902d9b79a6ea6b18e4fcc73/aiolimiter-1.3.0-py3-none-any.whl", hash = "sha256:c0c16c377049fb2e40cc3373770e29c063de32aa25d84e5db168c854da6462b7", size = 6955, upload-time = "2026-09-07T14:40:26.753Z" },
+]
+
+
+[[package]]
 name = "aiosignal"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
@@ -3297,6 +3307,9 @@ sentence-transformers = [
     { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu')" },
     { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
+voyageai = [
+    { name = "voyageai" },
+]
 weaviate = [
     { name = "weaviate-client" },
 ]
@@ -3330,6 +3343,7 @@ requires-dist = [
     { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.101.0,<2.0.0" },
     { name = "llama-index", marker = "extra == 'experimental'", specifier = ">=0.14.24,<0.15.0" },
     { name = "mistralai", marker = "extra == 'mistralai'", specifier = ">=2.7.1,<4.0.0" },
+    { name = "voyageai", marker = "extra == 'voyageai'", specifier = ">=0.5.0,<1.0.0" },
     { name = "neo4j", specifier = ">=6.3.1,<7.0.0" },
     { name = "neo4j-viz", marker = "extra == 'experimental'", specifier = ">=0.7.0,<0.8.0" },
     { name = "neo4j-viz", marker = "extra == 'kg-creation-tools'", specifier = ">=0.7.0,<0.8.0" },
@@ -3361,7 +3375,7 @@ requires-dist = [
     { name = "types-pyyaml", specifier = ">=6.0.12.20260906,<7.0.0" },
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.6.1,<5.0.0" },
 ]
-provides-extras = ["weaviate", "pinecone", "google", "google-genai", "cohere", "anthropic", "bedrock", "ollama", "openai", "mistralai", "litellm", "qdrant", "kg-creation-tools", "sentence-transformers", "gpu", "experimental", "examples", "nlp", "fuzzy-matching"]
+provides-extras = ["weaviate", "pinecone", "google", "google-genai", "cohere", "anthropic", "bedrock", "ollama", "openai", "mistralai", "voyageai", "litellm", "qdrant", "kg-creation-tools", "sentence-transformers", "gpu", "experimental", "examples", "nlp", "fuzzy-matching"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -6809,6 +6823,28 @@ sdist = { url = "https://files.pythonhosted.org/packages/20/28/e6f1a6f655d620846
 wheels = [
     { url = "https://files.pythonhosted.org/packages/79/0c/c05523fa3181fdf0c9c52a6ba91a23fbf3246cc095f26f6516f9c60e6771/virtualenv-20.35.4-py3-none-any.whl", hash = "sha256:c21c9cede36c9753eeade68ba7d523529f228a403463376cf821eaae2b650f1b", size = 6005095, upload-time = "2025-10-29T06:57:37.598Z" },
 ]
+
+[[package]]
+name = "voyageai"
+version = "0.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "aiolimiter" },
+    { name = "langchain-text-splitters" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "pillow" },
+    { name = "pydantic" },
+    { name = "requests" },
+    { name = "tenacity" },
+    { name = "tokenizers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0c/4d/f5cd158dbeb75e63ed955e84ac242184a8a73e07bdab0cbb6cdc6bc651d1/voyageai-0.6.0.tar.gz", hash = "sha256:9327de6130f8f755211470a4d135186461796c3c316488199c7485eea9213b69", size = 38358, upload-time = "2026-11-10T07:47:30.206Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/44/97/0c47cc38ee936356aef9dc7597577f08abbb6bdc8fee731ef2e0282bf36c/voyageai-0.6.0-py3-none-any.whl", hash = "sha256:54056603896c867d63c78d159415239a4bb767d8973bebb731500584444986ef", size = 48068, upload-time = "2026-11-10T07:47:29.208Z" },
+]
+
 
 [[package]]
 name = "wasabi"
