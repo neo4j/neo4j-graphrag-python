@@ -96,7 +96,7 @@ dev = [
     "urllib3<3",
     "ruff>=0.3.0,<0.18.0",
     "mypy>=1.10.0,<2.0.0",
-    "pytest>=9.0.3,<9.2.0",
+    "pytest>=9.0.3,<9.3.0",
     "coverage>=7.4.3,<8.0.0",
     "pytest-asyncio>=1.0.0,<2.0.0",
     "pre-commit>=3.6.2,<4.0.0; python_version >= '3.9'",
