@@ -76,7 +76,7 @@ class FixedSizeSplitter(TextSplitter):
     Args:
         chunk_size (int): The number of characters in each chunk.
         chunk_overlap (int): The number of characters from the previous chunk to overlap
-                            with each chunk. Must be less than `chunk_size`.
+                            with each chunk. Must be non-negative and less than `chunk_size`.
         approximate (bool): If True, avoids splitting words in the middle at chunk
                             boundaries. Defaults to True.
 
@@ -99,6 +99,8 @@ class FixedSizeSplitter(TextSplitter):
     ) -> None:
         if chunk_size <= 0:
             raise ValueError("chunk_size must be strictly greater than 0")
+        if chunk_overlap < 0:
+            raise ValueError("chunk_overlap must be non-negative")
         if chunk_overlap >= chunk_size:
             raise ValueError("chunk_overlap must be strictly less than chunk_size")
         self.chunk_size = chunk_size
