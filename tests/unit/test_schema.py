@@ -26,9 +26,8 @@ from neo4j_graphrag.schema import (
     EXCLUDED_RELS,
     INDEX_QUERY,
     LIST_LIMIT,
-    NODE_PROPERTIES_QUERY,
-    REL_PROPERTIES_QUERY,
-    REL_QUERY,
+    META_DATA_QUERY,
+    _split_meta_data,
     _value_sanitize,
     format_schema,
     get_enhanced_schema_cypher,
@@ -39,28 +38,29 @@ from neo4j_graphrag.schema import (
 
 def _query_return_value(*args: Any, **kwargs: Any) -> list[Any]:
     query = kwargs.get("query", args[1] if len(args) > 1 else "")
-    if NODE_PROPERTIES_QUERY in query:
+    if META_DATA_QUERY == query:
         return [
             {
-                "output": {
-                    "properties": [{"property": "property_a", "type": "STRING"}],
-                    "label": "LabelA",
-                }
-            }
-        ]
-    if REL_PROPERTIES_QUERY in query:
-        return [
+                "label": "LabelA",
+                "other": [],
+                "elementType": "node",
+                "type": "STRING",
+                "property": "property_a",
+            },
             {
-                "output": {
-                    "type": "REL_TYPE",
-                    "properties": [{"property": "rel_prop", "type": "STRING"}],
-                }
-            }
-        ]
-    if REL_QUERY in query:
-        return [
-            {"output": {"start": "LabelA", "type": "REL_TYPE", "end": "LabelB"}},
-            {"output": {"start": "LabelA", "type": "REL_TYPE", "end": "LabelC"}},
+                "label": "LabelA",
+                "other": ["LabelB", "LabelC"],
+                "elementType": "node",
+                "type": "RELATIONSHIP",
+                "property": "REL_TYPE",
+            },
+            {
+                "label": "REL_TYPE",
+                "other": [],
+                "elementType": "relationship",
+                "type": "STRING",
+                "property": "rel_prop",
+            },
         ]
     if "SHOW CONSTRAINTS" == query:
         return ["fake constraints"]
@@ -87,40 +87,18 @@ The relationships:
 
 def test_get_structured_schema_happy_path(driver: MagicMock) -> None:
     get_structured_schema(driver)
-    assert 5 == driver.execute_query.call_count
+    assert 3 == driver.execute_query.call_count
     calls = driver.execute_query.call_args_list
 
     args, kwargs = calls[0]
     query_obj = args[0]
     assert isinstance(query_obj, Query)
-    assert query_obj.text == NODE_PROPERTIES_QUERY
+    assert query_obj.text == META_DATA_QUERY
     assert query_obj.timeout is None
     assert kwargs["database_"] is None
-    assert kwargs["parameters_"] == {
-        "EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL],
-        "SAMPLE": 1000,
-    }
+    assert kwargs["parameters_"] == {"SAMPLE": 1000}
 
     args, kwargs = calls[1]
-    query_obj = args[0]
-    assert isinstance(query_obj, Query)
-    assert query_obj.text == REL_PROPERTIES_QUERY
-    assert query_obj.timeout is None
-    assert kwargs["database_"] is None
-    assert kwargs["parameters_"] == {"EXCLUDED_LABELS": EXCLUDED_RELS, "SAMPLE": 1000}
-
-    args, kwargs = calls[2]
-    query_obj = args[0]
-    assert isinstance(query_obj, Query)
-    assert query_obj.text == REL_QUERY
-    assert query_obj.timeout is None
-    assert kwargs["database_"] is None
-    assert kwargs["parameters_"] == {
-        "EXCLUDED_LABELS": EXCLUDED_LABELS + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL],
-        "SAMPLE": 1000,
-    }
-
-    args, kwargs = calls[3]
     query_obj = args[0]
     assert isinstance(query_obj, Query)
     assert query_obj.text == "SHOW CONSTRAINTS"
@@ -128,7 +106,7 @@ def test_get_structured_schema_happy_path(driver: MagicMock) -> None:
     assert kwargs["database_"] is None
     assert kwargs["parameters_"] == {}
 
-    args, kwargs = calls[4]
+    args, kwargs = calls[2]
     query_obj = args[0]
     assert isinstance(query_obj, Query)
     assert query_obj.text == INDEX_QUERY
@@ -153,6 +131,108 @@ def test_get_schema_ensure_structured_response(driver: MagicMock) -> None:
     ]
     assert result["metadata"]["constraint"] == ["fake constraints"]
     assert result["metadata"]["index"] == ["fake indexes"]
+
+
+def _meta_row(
+    label: str,
+    element_type: str,
+    prop_type: Any,
+    prop: str,
+    other: Any = None,
+) -> Dict[str, Any]:
+    return {
+        "label": label,
+        "other": [] if other is None else other,
+        "elementType": element_type,
+        "type": prop_type,
+        "property": prop,
+    }
+
+
+def test_split_meta_data() -> None:
+    rows = [
+        _meta_row("Person", "node", "STRING", "name"),
+        _meta_row("Person", "node", "INTEGER", "age"),
+        _meta_row("Person", "node", "RELATIONSHIP", "KNOWS", ["Person"]),
+        _meta_row("Person", "node", "RELATIONSHIP", "WORKS_AT", ["Company", "Org"]),
+        _meta_row("Company", "node", "STRING", "name"),
+        _meta_row("KNOWS", "relationship", "DATE", "since"),
+        # relationship rows on the relationship side are not edges
+        _meta_row("KNOWS", "relationship", "RELATIONSHIP", "Person", ["Person"]),
+        _meta_row("Person", "node", None, "unknown"),
+    ]
+    node_rows, rel_prop_rows, rel_rows = _split_meta_data(rows)
+
+    assert node_rows == [
+        {
+            "output": {
+                "label": "Person",
+                "properties": [
+                    {"property": "name", "type": "STRING"},
+                    {"property": "age", "type": "INTEGER"},
+                ],
+            }
+        },
+        {
+            "output": {
+                "label": "Company",
+                "properties": [{"property": "name", "type": "STRING"}],
+            }
+        },
+    ]
+    assert rel_prop_rows == [
+        {
+            "output": {
+                "type": "KNOWS",
+                "properties": [{"property": "since", "type": "DATE"}],
+            }
+        }
+    ]
+    assert rel_rows == [
+        {"output": {"start": "Person", "type": "KNOWS", "end": "Person"}},
+        {"output": {"start": "Person", "type": "WORKS_AT", "end": "Company"}},
+        {"output": {"start": "Person", "type": "WORKS_AT", "end": "Org"}},
+    ]
+
+
+def test_split_meta_data_excluded_labels() -> None:
+    rows = [
+        _meta_row(BASE_ENTITY_LABEL, "node", "STRING", "id"),
+        _meta_row(BASE_KG_BUILDER_LABEL, "node", "STRING", "id"),
+        _meta_row(EXCLUDED_LABELS[0], "node", "STRING", "id"),
+        _meta_row(EXCLUDED_RELS[0], "relationship", "STRING", "id"),
+        _meta_row(BASE_ENTITY_LABEL, "node", "RELATIONSHIP", "REL", ["Person"]),
+        _meta_row(
+            "Person", "node", "RELATIONSHIP", "REL", ["Company", BASE_ENTITY_LABEL]
+        ),
+    ]
+    node_rows, rel_prop_rows, rel_rows = _split_meta_data(rows)
+
+    assert node_rows == []
+    assert rel_prop_rows == []
+    assert rel_rows == [
+        {"output": {"start": "Person", "type": "REL", "end": "Company"}},
+    ]
+
+
+def test_get_structured_schema_sanitize_applies_after_split(
+    driver: MagicMock,
+) -> None:
+    # 200 labels at the other end of one relationship: a list that sanitize
+    # would drop on the raw apoc.meta.data row, but REL_QUERY unwinds it first.
+    others = [f"Label{i}" for i in range(200)]
+    rows = [_meta_row("Person", "node", "RELATIONSHIP", "REL", others)]
+
+    def _query(*args: Any, **kwargs: Any) -> list[Any]:
+        if kwargs["query"] == META_DATA_QUERY:
+            assert not kwargs.get("sanitize")
+            return rows
+        return []
+
+    with patch("neo4j_graphrag.schema.query_database", side_effect=_query):
+        result = get_structured_schema(driver, sanitize=True)
+
+    assert len(result["relationships"]) == 200
 
 
 @pytest.mark.parametrize(

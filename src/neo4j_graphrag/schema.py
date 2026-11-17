@@ -56,6 +56,15 @@ REL_QUERY = (
     "RETURN {start: label, type: property, end: toString(other_node)} AS output"
 )
 
+# get_structured_schema runs this once and splits the rows in Python with
+# the same filters as NODE_PROPERTIES_QUERY, REL_PROPERTIES_QUERY and REL_QUERY,
+# so that apoc.meta.data only scans the graph one time.
+META_DATA_QUERY = (
+    "CALL apoc.meta.data({sample: $SAMPLE}) "
+    "YIELD label, other, elementType, type, property "
+    "RETURN label, other, elementType, type, property"
+)
+
 INDEX_QUERY = (
     "CALL apoc.schema.nodes() YIELD label, properties, type, size, valuesSelectivity "
     "WHERE type = 'RANGE' RETURN *, "
@@ -229,6 +238,74 @@ def get_schema(
     return format_schema(structured_schema, is_enhanced)
 
 
+def _split_meta_data(
+    rows: List[Dict[str, Any]],
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """Split apoc.meta.data rows into node properties, relationship
+    properties and relationships.
+
+    Applies the same filters as NODE_PROPERTIES_QUERY, REL_PROPERTIES_QUERY
+    and REL_QUERY, and returns rows in the same ``{"output": ...}`` shape.
+
+    Args:
+        rows (List[Dict[str, Any]]): Rows from META_DATA_QUERY.
+
+    Returns:
+        Tuple of node property rows, relationship property rows and
+        relationship rows.
+    """
+    excluded_labels = EXCLUDED_LABELS + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL]
+    node_props: Dict[str, List[Dict[str, Any]]] = {}
+    rel_props: Dict[str, List[Dict[str, Any]]] = {}
+    relationships: List[Dict[str, Any]] = []
+
+    for row in rows:
+        label = row["label"]
+        element_type = row["elementType"]
+        prop_type = row["type"]
+        if prop_type is None:
+            # `NOT type = 'RELATIONSHIP'` and `type = 'RELATIONSHIP'` are both
+            # null in Cypher when type is null, so the row is dropped.
+            continue
+        if prop_type == "RELATIONSHIP":
+            if element_type != "node" or label in excluded_labels:
+                continue
+            for other_node in row["other"] or []:
+                if other_node in excluded_labels:
+                    continue
+                relationships.append(
+                    {
+                        "output": {
+                            "start": label,
+                            "type": row["property"],
+                            "end": str(other_node),
+                        }
+                    }
+                )
+        elif element_type == "node":
+            if label not in excluded_labels:
+                node_props.setdefault(label, []).append(
+                    {"property": row["property"], "type": prop_type}
+                )
+        elif element_type == "relationship":
+            if label not in EXCLUDED_RELS:
+                rel_props.setdefault(label, []).append(
+                    {"property": row["property"], "type": prop_type}
+                )
+
+    return (
+        [
+            {"output": {"label": label, "properties": properties}}
+            for label, properties in node_props.items()
+        ],
+        [
+            {"output": {"type": rel_type, "properties": properties}}
+            for rel_type, properties in rel_props.items()
+        ],
+        relationships,
+    )
+
+
 def get_structured_schema(
     driver: neo4j.Driver,
     is_enhanced: bool = False,
@@ -291,49 +368,23 @@ def get_structured_schema(
     Returns:
         dict[str, Any]: the graph schema information in a structured format.
     """
-    node_properties = [
-        data["output"]
-        for data in query_database(
-            driver=driver,
-            query=NODE_PROPERTIES_QUERY,
-            params={
-                "EXCLUDED_LABELS": EXCLUDED_LABELS
-                + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL],
-                "SAMPLE": sample,
-            },
-            database=database,
-            timeout=timeout,
-            sanitize=sanitize,
-        )
-    ]
-
-    rel_properties = [
-        data["output"]
-        for data in query_database(
-            driver=driver,
-            query=REL_PROPERTIES_QUERY,
-            params={"EXCLUDED_LABELS": EXCLUDED_RELS, "SAMPLE": sample},
-            database=database,
-            timeout=timeout,
-            sanitize=sanitize,
-        )
-    ]
-
-    relationships = [
-        data["output"]
-        for data in query_database(
-            driver=driver,
-            query=REL_QUERY,
-            params={
-                "EXCLUDED_LABELS": EXCLUDED_LABELS
-                + [BASE_ENTITY_LABEL, BASE_KG_BUILDER_LABEL],
-                "SAMPLE": sample,
-            },
-            database=database,
-            timeout=timeout,
-            sanitize=sanitize,
-        )
-    ]
+    # Sanitizing is applied after splitting, so that oversized lists are
+    # dropped from the same values as when each query ran separately.
+    meta_data = query_database(
+        driver=driver,
+        query=META_DATA_QUERY,
+        params={"SAMPLE": sample},
+        database=database,
+        timeout=timeout,
+    )
+    node_rows, rel_prop_rows, rel_rows = _split_meta_data(meta_data)
+    if sanitize:
+        node_rows = [_value_sanitize(row) for row in node_rows]
+        rel_prop_rows = [_value_sanitize(row) for row in rel_prop_rows]
+        rel_rows = [_value_sanitize(row) for row in rel_rows]
+    node_properties = [data["output"] for data in node_rows]
+    rel_properties = [data["output"] for data in rel_prop_rows]
+    relationships = [data["output"] for data in rel_rows]
 
     # Get constraints and indexes
     try:
