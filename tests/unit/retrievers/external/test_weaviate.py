@@ -19,11 +19,13 @@ from unittest.mock import MagicMock
 
 import neo4j
 import pytest
+from neo4j_graphrag import __version__
 from neo4j_graphrag.exceptions import RetrieverInitializationError
 from neo4j_graphrag.retrievers import WeaviateNeo4jRetriever
 from neo4j_graphrag.retrievers.external.utils import get_match_query
 from neo4j_graphrag.types import RetrieverResult, RetrieverResultItem
 from weaviate.client import WeaviateClient
+from weaviate.connect import ConnectionParams
 
 
 # Weaviate class with fake methods
@@ -307,4 +309,52 @@ def test_weaviate_retriever_with_result_format_function(
             ),
         ],
         metadata={"__retriever": "WeaviateNeo4jRetriever"},
+    )
+
+
+def _unconnected_client(headers: Optional[dict[str, str]] = None) -> WeaviateClient:
+    return WeaviateClient(
+        connection_params=ConnectionParams.from_params(
+            "localhost", 8080, False, "localhost", 50051, False
+        ),
+        additional_headers=headers,
+        skip_init_checks=True,
+    )
+
+
+def test_weaviate_retriever_sets_integration_header(driver: MagicMock) -> None:
+    client = _unconnected_client()
+
+    WeaviateNeo4jRetriever(
+        driver=driver,
+        client=client,
+        collection="dummy-collection",
+        id_property_neo4j="sync_id",
+        id_property_external="neo4j_id",
+    )
+
+    expected = f"neo4j-graphrag/{__version__}"
+    connection = client._connection
+    assert connection.additional_headers["X-Weaviate-Client-Integration"] == expected
+    assert ("x-weaviate-client-integration", expected) in (
+        connection.grpc_headers() or ()
+    )
+
+
+def test_weaviate_retriever_keeps_user_integration_header(driver: MagicMock) -> None:
+    client = _unconnected_client({"x-weaviate-client-integration": "my-app/1.0"})
+
+    WeaviateNeo4jRetriever(
+        driver=driver,
+        client=client,
+        collection="dummy-collection",
+        id_property_neo4j="sync_id",
+        id_property_external="neo4j_id",
+    )
+
+    assert client._connection.additional_headers == {
+        "x-weaviate-client-integration": "my-app/1.0"
+    }
+    assert client._connection.grpc_headers() == (
+        ("x-weaviate-client-integration", "my-app/1.0"),
     )
