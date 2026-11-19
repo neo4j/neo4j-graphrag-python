@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.10.0, <3.15"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform != 'darwin'",
@@ -22,7 +22,7 @@ conflicts = [[
 ]]
 
 [options]
-exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
+exclude-newer = "2026-11-12T14:58:47.694993Z"
 exclude-newer-span = "P1W"
 
 [options.exclude-newer-package]
@@ -44,12 +44,12 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohappyeyeballs" },
     { name = "aiosignal" },
-    { name = "async-timeout", marker = "python_full_version < '3.11'" },
+    { name = "async-timeout", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "attrs" },
     { name = "frozenlist" },
     { name = "multidict" },
     { name = "propcache" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "yarl" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/93/2f/6a91adaa2dc26877d6ed2f54c0370c8910f019db7d77c5c6a194611e93ea/aiohttp-3.14.4.tar.gz", hash = "sha256:831fc5bd39ec2517851e348f613ddb5447a47cf4b71cb09845af7ad7ed45d8f9", size = 8077839, upload-time = "2026-10-05T17:43:48.309Z" }
@@ -181,7 +181,7 @@ version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "frozenlist" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/61/62/06741b579156360248d1ec624842ad0edf697050bbaf7c3e46394e106ad1/aiosignal-1.4.0.tar.gz", hash = "sha256:f47eecd9468083c2029cc99945502cb7708b082c232f9aca65da147157b251c7", size = 25007, upload-time = "2025-07-03T22:54:43.528Z" }
 wheels = [
@@ -238,9 +238,9 @@ name = "anyio"
 version = "4.14.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "idna" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/61/cc/a381afa6efea9f496eff839d4a6a1aed3bfafc7b3ab4b0d1b243a12573dd/anyio-4.14.2.tar.gz", hash = "sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f", size = 260176, upload-time = "2026-07-12T20:29:07.082Z" }
 wheels = [
@@ -356,7 +356,7 @@ dependencies = [
     { name = "jinja2" },
     { name = "platformdirs" },
     { name = "pydantic" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f0/92/0449c32e718c10e4af40a3e040c830a77cdaeec6e9066622ee60e4c93e6e/banks-2.5.1.tar.gz", hash = "sha256:a7ca5c250b605ae90cfd6e4ca5dd6ce2ee377d5d59021b6feba44e345910026d", size = 196398, upload-time = "2026-09-10T10:15:34.569Z" }
 wheels = [
@@ -381,8 +381,8 @@ name = "blis"
 version = "1.3.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (python_full_version >= '3.14' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.14' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d0/d0/d8cc8c9a4488a787e7fa430f6055e5bd1ddb22c340a751d9e901b82e2efe/blis-1.3.3.tar.gz", hash = "sha256:034d4560ff3cc43e8aa37e188451b0440e3261d989bb8a42ceee865607715ecd", size = 2644873, upload-time = "2025-11-17T12:28:30.511Z" }
 wheels = [
@@ -492,7 +492,7 @@ name = "cffi"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycparser", marker = "implementation_name != 'PyPy'" },
+    { name = "pycparser", marker = "implementation_name != 'PyPy' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/eb/56/b1ba7935a17738ae8453301356628e8147c79dbb825bcbc73dc7401f9846/cffi-2.0.0.tar.gz", hash = "sha256:44d1b5909021139fe36001ae048dbdde8214afa20200eda0f64c068cac5d5529", size = 523588, upload-time = "2025-09-08T23:24:04.541Z" }
 wheels = [
@@ -681,7 +681,7 @@ name = "cloudpathlib"
 version = "0.23.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or python_full_version >= '3.14'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f4/18/2ac35d6b3015a0c74e923d94fc69baf8307f7c3233de015d69f99e17afa8/cloudpathlib-0.23.0.tar.gz", hash = "sha256:eb38a34c6b8a048ecfd2b2f60917f7cbad4a105b7c979196450c2f541f4d6b4b", size = 53126, upload-time = "2025-10-07T22:47:56.278Z" }
 wheels = [
@@ -721,7 +721,7 @@ name = "confection"
 version = "1.3.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11' or python_full_version >= '3.14'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/3e/b0/f43e446048750a34149532084abea73a79ec693e277e6db45da8662b754f/confection-1.3.4.tar.gz", hash = "sha256:560aebbeabaaeee369c54e21afc97953165b2166909ea81e14e341838f4b260d", size = 55094, upload-time = "2026-10-26T14:26:36.509Z" }
 wheels = [
@@ -832,8 +832,8 @@ name = "cryptography"
 version = "50.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cffi", marker = "platform_python_implementation != 'PyPy'" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "cffi", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/de/41/6cbdcf9142d00fe82836fbb51e503e58088575cf7a0fe1dbff6695bf0840/cryptography-50.0.0.tar.gz", hash = "sha256:eeac2acb5a20ed25e0ad6d1df9891a520b78b404266b6d11778f25d5d691a6c9", size = 880201, upload-time = "2026-07-31T14:25:10.11Z" }
 wheels = [
@@ -901,7 +901,7 @@ name = "cuda-bindings"
 version = "12.9.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cuda-pathfinder", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "cuda-pathfinder", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4e/09/b69ddb12bc78831ef1d8b7ec428ca5e308c891099ad77d00614889cd80cf/cuda_bindings-12.9.8-cp310-cp310-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:48f86f6c34f16ca8d9443c5f7751b6aa0d21d5cccbafab9b287cf35883c25b82", size = 7022911, upload-time = "2026-09-15T16:17:34.879Z" },
@@ -942,34 +942,34 @@ wheels = [
 
 [package.optional-dependencies]
 cublas = [
-    { name = "nvidia-cublas-cu12", marker = "(sys_platform == 'linux' or sys_platform == 'win32' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-cublas-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 cudart = [
-    { name = "nvidia-cuda-runtime-cu12", marker = "(sys_platform == 'linux' or sys_platform == 'win32' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-cuda-runtime-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 cufft = [
-    { name = "nvidia-cufft-cu12", marker = "(sys_platform == 'linux' or sys_platform == 'win32' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-cufft-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 cufile = [
-    { name = "nvidia-cufile-cu12", marker = "(sys_platform == 'linux' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-cufile-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 cupti = [
-    { name = "nvidia-cuda-cupti-cu12", marker = "(sys_platform == 'linux' or sys_platform == 'win32' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-cuda-cupti-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 curand = [
-    { name = "nvidia-curand-cu12", marker = "(sys_platform == 'linux' or sys_platform == 'win32' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-curand-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 cusolver = [
-    { name = "nvidia-cusolver-cu12", marker = "(sys_platform == 'linux' or sys_platform == 'win32' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-cusolver-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 cusparse = [
-    { name = "nvidia-cusparse-cu12", marker = "(sys_platform == 'linux' or sys_platform == 'win32' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-cusparse-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 nvrtc = [
-    { name = "nvidia-cuda-nvrtc-cu12", marker = "(sys_platform == 'linux' or sys_platform == 'win32' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-cuda-nvrtc-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 nvtx = [
-    { name = "nvidia-nvtx-cu12", marker = "(sys_platform == 'linux' or sys_platform == 'win32' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-nvtx-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 
 [[package]]
@@ -1196,7 +1196,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -1521,8 +1521,8 @@ dependencies = [
     { name = "google-auth" },
     { name = "google-cloud-bigquery" },
     { name = "google-cloud-resource-manager" },
-    { name = "google-cloud-storage", version = "3.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13'" },
-    { name = "google-cloud-storage", version = "3.13.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13'" },
+    { name = "google-cloud-storage", version = "3.7.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "google-cloud-storage", version = "3.13.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "google-genai" },
     { name = "packaging" },
     { name = "proto-plus" },
@@ -1596,12 +1596,12 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "google-api-core" },
-    { name = "google-auth" },
-    { name = "google-cloud-core" },
-    { name = "google-crc32c" },
-    { name = "google-resumable-media" },
-    { name = "requests" },
+    { name = "google-api-core", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "google-auth", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "google-cloud-core", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "google-crc32c", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "google-resumable-media", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "requests", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d2/8e/fab2de1a0ab7fdbd452eaae5a9a5c933d0911c26b04efa0c76ddfd921259/google_cloud_storage-3.7.0.tar.gz", hash = "sha256:9ce59c65f4d6e372effcecc0456680a8d73cef4f2dc9212a0704799cb3d69237", size = 17258914, upload-time = "2025-12-09T18:24:48.97Z" }
 wheels = [
@@ -1619,12 +1619,12 @@ resolution-markers = [
     "python_full_version == '3.13.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "google-api-core" },
-    { name = "google-auth" },
-    { name = "google-cloud-core" },
-    { name = "google-crc32c" },
-    { name = "google-resumable-media" },
-    { name = "requests" },
+    { name = "google-api-core", marker = "python_full_version >= '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "google-auth", marker = "python_full_version >= '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "google-cloud-core", marker = "python_full_version >= '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "google-crc32c", marker = "python_full_version >= '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "google-resumable-media", marker = "python_full_version >= '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "requests", marker = "python_full_version >= '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e3/25/355ed97c1723c787dfaa888808d55db18371f82c38ff862357b1e902cd19/google_cloud_storage-3.13.0.tar.gz", hash = "sha256:d11d8706ea1520fba0f21043bcb7897caf7015d76ce1ad9a4f60237e4d7a9f6c", size = 17340960, upload-time = "2026-07-13T19:10:07.524Z" }
 wheels = [
@@ -1991,12 +1991,12 @@ name = "httpx2"
 version = "2.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "anyio", marker = "sys_platform != 'emscripten'" },
-    { name = "httpcore2", marker = "sys_platform != 'emscripten'" },
-    { name = "httpx2-jsfetch", marker = "python_full_version >= '3.12' and sys_platform == 'emscripten'" },
+    { name = "anyio", marker = "sys_platform != 'emscripten' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "httpcore2", marker = "sys_platform != 'emscripten' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "httpx2-jsfetch", marker = "(python_full_version >= '3.12' and sys_platform == 'emscripten') or (python_full_version < '3.12' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.12' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform != 'emscripten' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform != 'emscripten' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "idna" },
-    { name = "truststore", marker = "sys_platform != 'emscripten'" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "truststore", marker = "sys_platform != 'emscripten' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b9/a0/e9deef4654132857b5a5dbe4eddd0ac59c2814500e11f2f5044cd81103ee/httpx2-2.13.0.tar.gz", hash = "sha256:81bd07dc67a3701729ef1f777a3c00c915d4539604fdb5afd327f8682f6b7b44", size = 100290, upload-time = "2026-09-14T14:18:05.486Z" }
 wheels = [
@@ -2020,11 +2020,11 @@ dependencies = [
     { name = "click" },
     { name = "filelock" },
     { name = "fsspec" },
-    { name = "hf-xet", marker = "platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'" },
+    { name = "hf-xet", marker = "platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "httpx" },
     { name = "packaging" },
     { name = "pyyaml" },
-    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
@@ -2099,17 +2099,17 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "decorator" },
-    { name = "exceptiongroup" },
-    { name = "jedi" },
-    { name = "matplotlib-inline" },
-    { name = "pexpect", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
-    { name = "prompt-toolkit" },
-    { name = "pygments" },
-    { name = "stack-data" },
-    { name = "traitlets" },
-    { name = "typing-extensions" },
+    { name = "colorama", marker = "(python_full_version < '3.11' and sys_platform == 'win32') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform != 'win32' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform != 'win32' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "decorator", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "jedi", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "matplotlib-inline", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "pexpect", marker = "(python_full_version < '3.11' and sys_platform != 'emscripten' and sys_platform != 'win32') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform == 'emscripten' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'emscripten' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "prompt-toolkit", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "pygments", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "stack-data", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "traitlets", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e5/61/1810830e8b93c72dcd3c0f150c80a00c3deb229562d9423807ec92c3a539/ipython-8.38.0.tar.gz", hash = "sha256:9cfea8c903ce0867cc2f23199ed8545eb741f3a69420bfcf3743ad1cec856d39", size = 5513996, upload-time = "2026-01-05T10:59:06.901Z" }
 wheels = [
@@ -2131,17 +2131,17 @@ resolution-markers = [
     "python_full_version == '3.11.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "decorator" },
-    { name = "ipython-pygments-lexers" },
-    { name = "jedi" },
-    { name = "matplotlib-inline" },
-    { name = "pexpect", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
-    { name = "prompt-toolkit" },
-    { name = "pygments" },
-    { name = "stack-data" },
-    { name = "traitlets" },
-    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
+    { name = "colorama", marker = "(python_full_version >= '3.11' and sys_platform == 'win32') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform != 'win32' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform != 'win32' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "decorator", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "ipython-pygments-lexers", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "jedi", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "matplotlib-inline", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "pexpect", marker = "(python_full_version >= '3.11' and sys_platform != 'emscripten' and sys_platform != 'win32') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform == 'emscripten' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'emscripten' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'win32' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "prompt-toolkit", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "pygments", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "stack-data", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "traitlets", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "typing-extensions", marker = "python_full_version == '3.11.*' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/46/dd/fb08d22ec0c27e73c8bc8f71810709870d51cadaf27b7ddd3f011236c100/ipython-9.9.0.tar.gz", hash = "sha256:48fbed1b2de5e2c7177eefa144aba7fcb82dac514f09b57e2ac9da34ddb54220", size = 4425043, upload-time = "2026-01-05T12:36:46.233Z" }
 wheels = [
@@ -2153,7 +2153,7 @@ name = "ipython-pygments-lexers"
 version = "1.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pygments" },
+    { name = "pygments", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ef/4c/5dd1d8af08107f88c7f741ead7a40854b8ac24ddf9ae850afbcf698aa552/ipython_pygments_lexers-1.1.1.tar.gz", hash = "sha256:09c0138009e56b6854f9535736f4171d855c8c08a563a0dcd8022f78355c7e81", size = 8393, upload-time = "2025-01-17T11:24:34.505Z" }
 wheels = [
@@ -2358,8 +2358,8 @@ dependencies = [
     { name = "attrs" },
     { name = "jsonschema-specifications" },
     { name = "referencing" },
-    { name = "rpds-py", version = "0.30.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "rpds-py", version = "2026.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "rpds-py", version = "0.30.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "rpds-py", version = "2026.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b3/fc/e067678238fa451312d4c62bf6e6cf5ec56375422aee02f9cb5f909b3047/jsonschema-4.26.0.tar.gz", hash = "sha256:0c26707e2efad8aa1bfc5b7ce170f3fccc2e4918ff85989ba9ffa9facb2be326", size = 366583, upload-time = "2026-01-07T13:41:07.246Z" }
 wheels = [
@@ -2461,7 +2461,7 @@ dependencies = [
     { name = "anyio" },
     { name = "distro" },
     { name = "httpx2" },
-    { name = "orjson", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "orjson", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "packaging" },
     { name = "pydantic" },
     { name = "requests" },
@@ -2613,11 +2613,11 @@ dependencies = [
     { name = "httpx" },
     { name = "llama-index-workflows" },
     { name = "nest-asyncio" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "nltk" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "pillow" },
     { name = "platformdirs" },
     { name = "pydantic" },
@@ -2938,7 +2938,7 @@ name = "multidict"
 version = "6.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d6/99/1d4d69c3512d0ddbfa3a1b69cfd9a151012ab2eb4eabbb096201b1f0b7d8/multidict-6.9.1.tar.gz", hash = "sha256:0f06e60fa190aa7abd0914c2a766736fdc8e9f34878c4346338534b73d1b20e2", size = 182404, upload-time = "2026-09-21T17:59:05.362Z" }
 wheels = [
@@ -3140,10 +3140,10 @@ name = "mypy"
 version = "1.19.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "librt", marker = "platform_python_implementation != 'PyPy'" },
+    { name = "librt", marker = "platform_python_implementation != 'PyPy' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "mypy-extensions" },
     { name = "pathspec" },
-    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f5/db/4efed9504bc01309ab9c2da7e352cc223569f05478012b5d9ece38fd44d2/mypy-1.19.1.tar.gz", hash = "sha256:19d88bb05303fe63f71dd2c6270daca27cb9401c4ca8255fe50d1d920e0eb9ba", size = 3582404, upload-time = "2025-12-15T05:03:48.42Z" }
@@ -3219,13 +3219,13 @@ dependencies = [
     { name = "fsspec" },
     { name = "json-repair" },
     { name = "neo4j" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "pydantic" },
     { name = "pypdf" },
     { name = "pyyaml" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "tenacity" },
     { name = "types-pyyaml" },
 ]
@@ -3245,8 +3245,8 @@ examples = [
     { name = "langchain-openai" },
     { name = "python-dotenv" },
     { name = "requests" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-examples') or (sys_platform == 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples') or (sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 experimental = [
     { name = "langchain-text-splitters" },
@@ -3265,8 +3265,8 @@ google-genai = [
 ]
 gpu = [
     { name = "sentence-transformers" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "torch", version = "2.14.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "torch", version = "2.14.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 kg-creation-tools = [
     { name = "neo4j-viz" },
@@ -3278,7 +3278,7 @@ mistralai = [
     { name = "mistralai" },
 ]
 nlp = [
-    { name = "spacy", marker = "python_full_version < '3.14'" },
+    { name = "spacy", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 ollama = [
     { name = "ollama" },
@@ -3294,8 +3294,8 @@ qdrant = [
 ]
 sentence-transformers = [
     { name = "sentence-transformers" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' or extra == 'extra-14-neo4j-graphrag-gpu') and extra == 'extra-14-neo4j-graphrag-sentence-transformers' or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu'" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-gpu') and extra == 'extra-14-neo4j-graphrag-sentence-transformers' or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 weaviate = [
     { name = "weaviate-client" },
@@ -3321,7 +3321,7 @@ requires-dist = [
     { name = "boto3", marker = "extra == 'bedrock'", specifier = ">=1.35.0,<2.0.0" },
     { name = "cohere", marker = "extra == 'cohere'", specifier = ">=5.9.0,<6.0.0" },
     { name = "fsspec", specifier = ">=2024.12.0,<2027.0.0" },
-    { name = "google-cloud-aiplatform", marker = "extra == 'google'", specifier = ">=2.8.0,<2.9.0" },
+    { name = "google-cloud-aiplatform", marker = "extra == 'google'", specifier = ">=1.66.0,<3.0.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = ">=1.62.0,<3.0.0" },
     { name = "json-repair", specifier = ">=0.44.1,<1.0.0" },
     { name = "langchain-huggingface", marker = "extra == 'examples'", specifier = ">=0.1.0,<2.0.0" },
@@ -3383,8 +3383,8 @@ version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "enum-tools" },
-    { name = "ipython", version = "8.38.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "ipython", version = "9.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "ipython", version = "8.38.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "ipython", version = "9.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "pydantic" },
     { name = "pydantic-extra-types" },
 ]
@@ -3663,7 +3663,7 @@ name = "nvidia-cudnn-cu12"
 version = "9.10.2.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-cublas-cu12", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/41/e79269ce215c857c935fd86bcfe91a451a584dfc27f1e068f568b9ad1ab7/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:c9132cc3f8958447b4910a1720036d9eff5928cc3179b0a51fb6d167c6cc87d8", size = 705026878, upload-time = "2025-06-06T21:52:51.348Z" },
@@ -3676,7 +3676,7 @@ name = "nvidia-cufft-cu12"
 version = "11.3.0.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1f/37/c50d2b2f2c07e146776389e3080f4faf70bcc4fa6e19d65bb54ca174ebc3/nvidia_cufft_cu12-11.3.0.4-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:d16079550df460376455cba121db6564089176d9bac9e4f360493ca4741b22a6", size = 200164144, upload-time = "2024-11-20T17:40:58.288Z" },
@@ -3712,9 +3712,9 @@ name = "nvidia-cusolver-cu12"
 version = "11.7.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "nvidia-cusparse-cu12", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-cublas-cu12", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "nvidia-cusparse-cu12", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/93/17/dbe1aa865e4fdc7b6d4d0dd308fdd5aaab60f939abfc0ea1954eac4fb113/nvidia_cusolver_cu12-11.7.1.2-py3-none-manylinux2014_aarch64.whl", hash = "sha256:0ce237ef60acde1efc457335a2ddadfd7610b892d94efee7b776c64bb1cac9e0", size = 157833628, upload-time = "2024-10-01T17:05:05.591Z" },
@@ -3729,7 +3729,7 @@ name = "nvidia-cusparse-cu12"
 version = "12.5.4.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/eb/eb/6681efd0aa7df96b4f8067b3ce7246833dd36830bb4cec8896182773db7d/nvidia_cusparse_cu12-12.5.4.2-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:d25b62fb18751758fe3c93a4a08eff08effedfe4edf1c6bb5afd0890fe88f887", size = 216451147, upload-time = "2024-11-20T17:44:18.055Z" },
@@ -4112,7 +4112,7 @@ name = "portalocker"
 version = "3.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pywin32", marker = "sys_platform == 'win32'" },
+    { name = "pywin32", marker = "sys_platform == 'win32' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5e/77/65b857a69ed876e1951e88aaba60f5ce6120c33703f7cb61a3c894b8c1b6/portalocker-3.2.0.tar.gz", hash = "sha256:1f3002956a54a8c3730586c5c77bf18fae4149e07eaf1c29fc3faf4d5a3f89ac", size = 95644, upload-time = "2025-06-14T13:20:40.03Z" }
 wheels = [
@@ -4140,8 +4140,8 @@ name = "preshed"
 version = "3.0.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cymem" },
-    { name = "murmurhash" },
+    { name = "cymem", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "murmurhash", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/bf/34/eb4f5f0f678e152a96e826da867d2f41c4b18a2d589e40e1dd3347219e91/preshed-3.0.12.tar.gz", hash = "sha256:b73f9a8b54ee1d44529cc6018356896cff93d48f755f29c134734d9371c0d685", size = 15027, upload-time = "2025-11-17T13:00:33.621Z" }
 wheels = [
@@ -4627,7 +4627,7 @@ name = "pypdf"
 version = "6.21.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/06/28/081f1cbcca7042441dafc8de00f48ba60853f89e5bff92c5f26477346d81/pypdf-6.21.2.tar.gz", hash = "sha256:0a3e1c5c886a1be03646c16a04827cc166c2a0575c971b26a4bf89686551c2d4", size = 7144571, upload-time = "2026-10-21T16:44:55.272Z" }
 wheels = [
@@ -4639,13 +4639,13 @@ name = "pytest"
 version = "9.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
-    { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "exceptiongroup", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "iniconfig" },
     { name = "packaging" },
     { name = "pluggy" },
     { name = "pygments" },
-    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/79/42/bb4641652e58dedeac2ec51abc1f8cae4fee4ec63899a0999016229a0f2a/pytest-9.2.0.tar.gz", hash = "sha256:97c4f3b1f3c7414aa36465e09b8220f1d03627993bd51b1282e193753c80557b", size = 1797555, upload-time = "2026-10-27T21:30:20.728Z" }
 wheels = [
@@ -4657,9 +4657,9 @@ name = "pytest-asyncio"
 version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "backports-asyncio-runner", marker = "python_full_version < '3.11'" },
+    { name = "backports-asyncio-runner", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "pytest" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/43/7c/d36d04db312ecf4298932ef77e6e4a9e8ad017906e24e34f0b0c361a2473/pytest_asyncio-1.4.0.tar.gz", hash = "sha256:c6c0d2259945122819f171a32ecea2c349ead889ee28176caaf492143424be42", size = 58514, upload-time = "2026-05-26T09:56:04.083Z" }
 wheels = [
@@ -4802,8 +4802,8 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "grpcio" },
     { name = "httpx", extra = ["http2"] },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "portalocker" },
     { name = "protobuf" },
     { name = "pydantic" },
@@ -4910,9 +4910,9 @@ version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "attrs" },
-    { name = "rpds-py", version = "0.30.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "rpds-py", version = "2026.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+    { name = "rpds-py", version = "0.30.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "rpds-py", version = "2026.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/22/f5/df4e9027acead3ecc63e50fe1e36aca1523e1719559c499951bb4b53188f/referencing-0.37.0.tar.gz", hash = "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8", size = 78036, upload-time = "2025-10-13T15:30:48.871Z" }
 wheels = [
@@ -5324,7 +5324,7 @@ name = "ruamel-yaml"
 version = "0.18.16"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ruamel-yaml-clib", marker = "python_full_version < '3.14' and platform_python_implementation == 'CPython'" },
+    { name = "ruamel-yaml-clib", marker = "(python_full_version < '3.14' and platform_python_implementation == 'CPython') or (python_full_version >= '3.14' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.14' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (platform_python_implementation != 'CPython' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (platform_python_implementation != 'CPython' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9f/c7/ee630b29e04a672ecfc9b63227c87fd7a37eb67c1bf30fe95376437f897c/ruamel.yaml-0.18.16.tar.gz", hash = "sha256:a6e587512f3c998b2225d68aa1f35111c29fad14aed561a26e73fab729ec5e5a", size = 147269, upload-time = "2025-10-22T17:54:02.346Z" }
 wheels = [
@@ -5567,7 +5567,7 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0f/37/6964b830433e654ec7485e45a00fc9a27cf868d622838f6b6d9c5ec0d532/scipy-1.15.3.tar.gz", hash = "sha256:eae3cf522bc7df64b42cad3925c876e1b0b6c35c1337c93e12c0f366f55b0eaf", size = 59419214, upload-time = "2025-05-08T16:13:05.955Z" }
 wheels = [
@@ -5633,7 +5633,7 @@ resolution-markers = [
     "python_full_version == '3.11.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0a/ca/d8ace4f98322d01abcd52d381134344bf7b431eba7ed8b42bdea5a3c2ac9/scipy-1.16.3.tar.gz", hash = "sha256:01e87659402762f43bd2fee13370553a17ada367d42e7487800bf2916535aecb", size = 30597883, upload-time = "2025-10-28T17:38:54.068Z" }
 wheels = [
@@ -5705,16 +5705,16 @@ version = "6.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and (extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers') or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and (extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers') or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and (extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers') or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "scikit-learn", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and (extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers') or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and (extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers') or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and (extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers') or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "scikit-learn", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "scipy", version = "1.16.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "tokenizers" },
-    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "sys_platform == 'darwin' and (extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers') or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-gpu') and extra == 'extra-14-neo4j-graphrag-sentence-transformers' or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu'" },
-    { name = "torch", version = "2.14.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "torch", version = "2.14.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "torch", version = "2.14.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "torch", version = "2.14.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "tqdm" },
     { name = "transformers" },
     { name = "typing-extensions" },
@@ -5756,7 +5756,7 @@ name = "smart-open"
 version = "7.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "wrapt" },
+    { name = "wrapt", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/67/9a/0a7acb748b86e2922982366d780ca4b16c33f7246fa5860d26005c97e4f3/smart_open-7.5.0.tar.gz", hash = "sha256:f394b143851d8091011832ac8113ea4aba6b92e6c35f6e677ddaaccb169d7cb9", size = 53920, upload-time = "2025-11-08T21:38:40.698Z" }
 wheels = [
@@ -5765,7 +5765,7 @@ wheels = [
 
 [package.optional-dependencies]
 http = [
-    { name = "requests" },
+    { name = "requests", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 
 [[package]]
@@ -5800,27 +5800,27 @@ name = "spacy"
 version = "3.8.18"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "catalogue" },
-    { name = "click" },
-    { name = "confection" },
-    { name = "cymem" },
-    { name = "jinja2" },
-    { name = "murmurhash" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
-    { name = "packaging" },
-    { name = "preshed" },
-    { name = "pydantic" },
-    { name = "requests" },
-    { name = "setuptools" },
-    { name = "spacy-legacy" },
-    { name = "spacy-loggers" },
-    { name = "srsly" },
-    { name = "thinc" },
-    { name = "tqdm" },
-    { name = "typer" },
-    { name = "wasabi" },
-    { name = "weasel" },
+    { name = "catalogue", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "click", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "confection", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "cymem", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "jinja2", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "murmurhash", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (python_full_version >= '3.14' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.14' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "packaging", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "preshed", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "pydantic", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "requests", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "setuptools", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "spacy-legacy", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "spacy-loggers", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "srsly", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "thinc", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "tqdm", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "typer", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "wasabi", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "weasel", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/01/3a/1805baf651a20b9f2dbc2e76bc9ba085028175a9d104c5e72da514e34c50/spacy-3.8.18.tar.gz", hash = "sha256:cbb0a630b30b2c20f96eefc5c7c65f8b2ca264c943050043db0c9315d1cc876d", size = 1331024, upload-time = "2026-10-26T21:24:01.029Z" }
 wheels = [
@@ -5890,7 +5890,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "alabaster" },
     { name = "babel" },
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "docutils" },
     { name = "imagesize" },
     { name = "jinja2" },
@@ -5904,7 +5904,7 @@ dependencies = [
     { name = "sphinxcontrib-jsmath" },
     { name = "sphinxcontrib-qthelp" },
     { name = "sphinxcontrib-serializinghtml" },
-    { name = "tomli", marker = "python_full_version < '3.11'" },
+    { name = "tomli", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/5b/be/50e50cb4f2eff47df05673d361095cafd95521d2a22521b920c67a372dcb/sphinx-7.4.7.tar.gz", hash = "sha256:242f92a7ea7e6c5b406fdc2615413890ba9f699114a9c09192d7dfead2ee9cfe", size = 8067911, upload-time = "2024-07-20T14:46:56.059Z" }
 wheels = [
@@ -5930,7 +5930,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jinja2" },
     { name = "markupsafe" },
-    { name = "standard-imghdr", marker = "python_full_version >= '3.13'" },
+    { name = "standard-imghdr", marker = "python_full_version >= '3.13' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/43/98/43313781f29e8c6c46fec907430310172d6f207e95e4fbea9289990fbbfe/sphinx_jinja2_compat-0.4.1.tar.gz", hash = "sha256:0188f0802d42c3da72997533b55a00815659a78d3f81d4b4747b1fb15a5728e6", size = 5222, upload-time = "2025-08-06T20:06:25.824Z" }
 wheels = [
@@ -5946,9 +5946,9 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "docutils" },
-    { name = "pygments" },
-    { name = "sphinx" },
+    { name = "docutils", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "pygments", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "sphinx", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e7/fb/7a07b8df1ca2418147a6b13e3f6b445071f2565198b45efa631d0d6ef0cd/sphinx_prompt-1.8.0.tar.gz", hash = "sha256:47482f86fcec29662fdfd23e7c04ef03582714195d01f5d565403320084372ed", size = 5121, upload-time = "2023-09-14T12:46:13.449Z" }
 wheels = [
@@ -5970,14 +5970,14 @@ resolution-markers = [
     "python_full_version == '3.11.*' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "certifi" },
-    { name = "docutils" },
-    { name = "idna" },
-    { name = "jinja2" },
-    { name = "pygments" },
-    { name = "requests" },
-    { name = "sphinx" },
-    { name = "urllib3" },
+    { name = "certifi", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "docutils", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "idna", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "jinja2", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "pygments", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "requests", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "sphinx", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "urllib3", marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d0/a3/91293c0e0f0b76d0697ba7a41541929ca3f5457671d008bd84a9bde17e21/sphinx_prompt-1.10.2.tar.gz", hash = "sha256:47b592ba75caebd044b0eddf7a5a1b6e0aef6df587b034377cd101a999b686ba", size = 5566, upload-time = "2025-11-28T09:23:18.057Z" }
 wheels = [
@@ -6017,8 +6017,8 @@ dependencies = [
     { name = "sphinx" },
     { name = "sphinx-autodoc-typehints" },
     { name = "sphinx-jinja2-compat" },
-    { name = "sphinx-prompt", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "sphinx-prompt", version = "1.10.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "sphinx-prompt", version = "1.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "sphinx-prompt", version = "1.10.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "sphinx-tabs" },
     { name = "tabulate" },
     { name = "typing-extensions" },
@@ -6087,7 +6087,7 @@ name = "sqlalchemy"
 version = "2.0.45"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "greenlet", marker = "platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'" },
+    { name = "greenlet", marker = "platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/be/f9/5e4491e5ccf42f5d9cfc663741d261b3e6e1683ae7812114e7636409fcc6/sqlalchemy-2.0.45.tar.gz", hash = "sha256:1632a4bda8d2d25703fdad6363058d882541bdaaee0e5e3ddfa0cd3229efce88", size = 9869912, upload-time = "2025-12-09T21:05:16.737Z" }
@@ -6141,7 +6141,7 @@ name = "srsly"
 version = "2.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "catalogue" },
+    { name = "catalogue", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/2b/db/f794f219a6c788b881252d2536a8c4a97d2bdaadc690391e1cb53d123d71/srsly-2.5.3.tar.gz", hash = "sha256:08f98dbecbff3a31466c4ae7c833131f59d3655a0ad8ac749e6e2c149e2b0680", size = 490881, upload-time = "2026-03-23T11:56:59.865Z" }
 wheels = [
@@ -6253,19 +6253,19 @@ name = "thinc"
 version = "8.3.13"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "blis" },
-    { name = "catalogue" },
-    { name = "confection" },
-    { name = "cymem" },
-    { name = "murmurhash" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or python_full_version >= '3.14'" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
-    { name = "packaging" },
-    { name = "preshed" },
-    { name = "pydantic" },
-    { name = "setuptools" },
-    { name = "srsly" },
-    { name = "wasabi" },
+    { name = "blis", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "catalogue", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "confection", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "cymem", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "murmurhash", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and python_full_version < '3.14') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (python_full_version >= '3.14' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.14' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "packaging", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "preshed", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "pydantic", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "setuptools", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "srsly", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "wasabi", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/13/46/76df95f2c327f9a9cef30c1523bf285627897097163584dcf5f77b2ebce2/thinc-8.3.13.tar.gz", hash = "sha256:68e658549fc1eb3ff92aed5147fcbb9c15d6e9cc0e623b4d0998d16522ffb4f9", size = 194640, upload-time = "2026-03-23T07:22:36.41Z" }
 wheels = [
@@ -6480,14 +6480,14 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform == 'darwin'",
 ]
 dependencies = [
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "jinja2" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "setuptools" },
-    { name = "sympy" },
-    { name = "typing-extensions" },
+    { name = "filelock", marker = "sys_platform == 'darwin'" },
+    { name = "fsspec", marker = "sys_platform == 'darwin'" },
+    { name = "jinja2", marker = "sys_platform == 'darwin'" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform == 'darwin') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform == 'darwin') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "setuptools", marker = "sys_platform == 'darwin'" },
+    { name = "sympy", marker = "sys_platform == 'darwin'" },
+    { name = "typing-extensions", marker = "sys_platform == 'darwin'" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.14.0-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:99c318463564d7e05a23be78e9d0a11e5aabf34ee593fb83d891218a1313d356", upload-time = "2026-09-02T00:26:03Z" },
@@ -6510,14 +6510,14 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform != 'darwin'",
 ]
 dependencies = [
-    { name = "filelock", marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
-    { name = "fsspec", marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
-    { name = "jinja2", marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
-    { name = "setuptools", marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
-    { name = "sympy", marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
-    { name = "typing-extensions", marker = "(sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "filelock", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples') or (sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "fsspec", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples') or (sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "jinja2", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples') or (sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples') or (python_full_version < '3.11' and sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra != 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples') or (python_full_version >= '3.11' and sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra != 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "setuptools", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples') or (sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "sympy", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples') or (sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "typing-extensions", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-examples') or (sys_platform != 'darwin' and extra != 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.14.0%2Bcpu-cp310-cp310-linux_s390x.whl", hash = "sha256:5a3d72abbd3499175a4a6a45056fcc00898c2845235e534538cdcbdeedf642ae", upload-time = "2026-09-02T18:30:49Z" },
@@ -6561,22 +6561,22 @@ resolution-markers = [
     "python_full_version < '3.11' and sys_platform != 'darwin'",
 ]
 dependencies = [
-    { name = "cuda-bindings", marker = "(sys_platform == 'linux' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "cuda-toolkit", extra = ["cublas", "cudart", "cufft", "cufile", "cupti", "curand", "cusolver", "cusparse", "nvrtc", "nvtx"], marker = "(sys_platform == 'linux' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "filelock", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "fsspec", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "jinja2", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
-    { name = "nvidia-cudnn-cu12", marker = "(sys_platform == 'linux' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "nvidia-cusparselt-cu12", marker = "(sys_platform == 'linux' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "nvidia-nccl-cu12", marker = "(sys_platform == 'linux' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform == 'linux' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "nvidia-nvshmem-cu12", marker = "(sys_platform == 'linux' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "setuptools", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "sympy", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "triton", marker = "(sys_platform == 'linux' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "typing-extensions", marker = "(sys_platform != 'darwin' or extra == 'extra-14-neo4j-graphrag-examples') and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "cuda-bindings", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "cuda-toolkit", extra = ["cublas", "cudart", "cufft", "cufile", "cupti", "curand", "cusolver", "cusparse", "nvrtc", "nvtx"], marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "filelock", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "fsspec", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "jinja2", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform == 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "nvidia-cudnn-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "nvidia-cusparselt-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "nvidia-nccl-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "nvidia-nvjitlink-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "nvidia-nvshmem-cu12", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "setuptools", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "sympy", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "triton", marker = "(sys_platform == 'linux' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "typing-extensions", marker = "(sys_platform != 'darwin' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cu126/torch-2.14.0%2Bcu126-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:b1fd46592963134867e6533775eb8ef354ef450d1b1a277f50592011ed28048d", upload-time = "2026-09-02T18:33:28Z" },
@@ -6604,7 +6604,7 @@ name = "tqdm"
 version = "4.67.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "sys_platform == 'win32' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a8/4b/29b4ef32e036bb34e4ab51796dd745cdba7ed47ad142a9f4a1eb8e0c744d/tqdm-4.67.1.tar.gz", hash = "sha256:f8aef9c52c08c13a65f30ea34f4e5aac3fd1a34959879d7e59e63027286627f2", size = 169737, upload-time = "2024-11-24T20:12:22.481Z" }
 wheels = [
@@ -6626,8 +6626,8 @@ version = "5.15.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "huggingface-hub" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11' and (extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers') or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
-    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and (extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-sentence-transformers') or extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu' or extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers'" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version < '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "numpy", version = "2.4.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.11' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
     { name = "packaging" },
     { name = "pyyaml" },
     { name = "regex" },
@@ -6803,7 +6803,7 @@ dependencies = [
     { name = "distlib" },
     { name = "filelock" },
     { name = "platformdirs" },
-    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/20/28/e6f1a6f655d620846bd9df527390ecc26b3805a0c5989048c210e22c5ca9/virtualenv-20.35.4.tar.gz", hash = "sha256:643d3914d73d3eeb0c552cbb12d7e82adf0e504dbf86a3182f8771a153a1971c", size = 6028799, upload-time = "2025-10-29T06:57:40.511Z" }
 wheels = [
@@ -6815,7 +6815,7 @@ name = "wasabi"
 version = "1.1.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "colorama", marker = "sys_platform == 'win32'" },
+    { name = "colorama", marker = "(python_full_version < '3.14' and sys_platform == 'win32') or (python_full_version >= '3.14' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (python_full_version >= '3.14' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers') or (sys_platform != 'win32' and extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (sys_platform != 'win32' and extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ac/f9/054e6e2f1071e963b5e746b48d1e3727470b2a490834d18ad92364929db3/wasabi-1.1.3.tar.gz", hash = "sha256:4bb3008f003809db0c3e28b4daf20906ea871a2bb43f9914197d540f4f2e0878", size = 30391, upload-time = "2024-05-31T16:56:18.99Z" }
 wheels = [
@@ -6836,16 +6836,16 @@ name = "weasel"
 version = "1.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "click" },
-    { name = "cloudpathlib" },
-    { name = "confection" },
-    { name = "httpx" },
-    { name = "packaging" },
-    { name = "pydantic" },
-    { name = "smart-open", extra = ["http"] },
-    { name = "srsly" },
-    { name = "typer" },
-    { name = "wasabi" },
+    { name = "click", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "cloudpathlib", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "confection", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "httpx", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "packaging", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "pydantic", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "smart-open", extra = ["http"], marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "srsly", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "typer", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
+    { name = "wasabi", marker = "python_full_version < '3.14' or (extra == 'extra-14-neo4j-graphrag-examples' and extra == 'extra-14-neo4j-graphrag-gpu') or (extra == 'extra-14-neo4j-graphrag-gpu' and extra == 'extra-14-neo4j-graphrag-sentence-transformers')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d7/bf/490fc13b28ad51b6c5c36d2abae1b9b64101d24ec7cb2aefa7d6504fd5cf/weasel-1.0.1.tar.gz", hash = "sha256:ca5dbfd24002dd85bd8a73a7f02d2471744c1b1a64d25698e05bb587a099a43e", size = 39092, upload-time = "2026-10-26T14:34:11.161Z" }
 wheels = [
