@@ -437,7 +437,9 @@ async def test_parquet_writer_preserves_lexical_graph_nodes_and_rels() -> None:
             assert path.exists(), f"Expected file {path}"
             table = pyarrow.parquet.read_table(path)
             if "__from__" in table.column_names and "__to__" in table.column_names:
-                rel_type = table.column("__type__")[0].as_py() if table.num_rows else None
+                rel_type = (
+                    table.column("__type__")[0].as_py() if table.num_rows else None
+                )
                 key = (
                     table.column("__from_label__")[0].as_py(),
                     rel_type,
