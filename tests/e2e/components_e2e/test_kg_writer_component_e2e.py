@@ -222,9 +222,9 @@ async def test_parquet_writer_e2e() -> None:
             path = Path(f["file_path"])
             assert path.exists(), f"Expected file {path}"
             table = pyarrow.parquet.read_table(path)
-            if "from" in table.column_names and "to" in table.column_names:
+            if "__from__" in table.column_names and "__to__" in table.column_names:
                 rel_file = path
-            elif "labels" in table.column_names:
+            elif "__labels__" in table.column_names:
                 node_file = path
         assert node_file is not None, "No node Parquet file found"
         assert rel_file is not None, "No relationship Parquet file found"
@@ -238,11 +238,11 @@ async def test_parquet_writer_e2e() -> None:
 
         rel_table = pyarrow.parquet.read_table(rel_file)
         assert rel_table.num_rows == 1
-        assert "from" in rel_table.column_names
-        assert "to" in rel_table.column_names
-        assert rel_table.column("type")[0].as_py() == "KNOWS"
-        assert rel_table.column("from")[0].as_py() == "p1"
-        assert rel_table.column("to")[0].as_py() == "p2"
+        assert "__from__" in rel_table.column_names
+        assert "__to__" in rel_table.column_names
+        assert rel_table.column("__type__")[0].as_py() == "KNOWS"
+        assert rel_table.column("__from__")[0].as_py() == "p1"
+        assert rel_table.column("__to__")[0].as_py() == "p2"
 
 
 @pytest.mark.asyncio
@@ -407,12 +407,12 @@ async def test_parquet_writer_preserves_lexical_graph_nodes_and_rels() -> None:
         rel_files_meta = [f for f in files_meta if f.get("is_node") is False]
         assert any(
             f.get("name") == config.document_node_label
-            or config.document_node_label in (f.get("labels") or [])
+            or config.document_node_label in (f.get("__labels__") or [])
             for f in node_files_meta
         ), "metadata files should include lexical document node file"
         assert any(
             f.get("name") == config.chunk_node_label
-            or config.chunk_node_label in (f.get("labels") or [])
+            or config.chunk_node_label in (f.get("__labels__") or [])
             for f in node_files_meta
         ), "metadata files should include lexical chunk node file"
         assert any(
@@ -436,16 +436,16 @@ async def test_parquet_writer_preserves_lexical_graph_nodes_and_rels() -> None:
         for path in files_meta_paths:
             assert path.exists(), f"Expected file {path}"
             table = pyarrow.parquet.read_table(path)
-            if "from" in table.column_names and "to" in table.column_names:
-                rel_type = table.column("type")[0].as_py() if table.num_rows else None
+            if "__from__" in table.column_names and "__to__" in table.column_names:
+                rel_type = table.column("__type__")[0].as_py() if table.num_rows else None
                 key = (
-                    table.column("from_label")[0].as_py(),
+                    table.column("__from_label__")[0].as_py(),
                     rel_type,
-                    table.column("to_label")[0].as_py(),
+                    table.column("__to_label__")[0].as_py(),
                 )
                 rel_files[key] = path
-            elif "labels" in table.column_names:
-                labels_col = table.column("labels")
+            elif "__labels__" in table.column_names:
+                labels_col = table.column("__labels__")
                 first_labels = labels_col.slice(0, 1)
                 label_set = set(first_labels[0].as_py()) if first_labels else set()
                 if config.document_node_label in label_set:
@@ -469,7 +469,7 @@ async def test_parquet_writer_preserves_lexical_graph_nodes_and_rels() -> None:
         # Lexical nodes: labels column must NOT contain __Entity__
         doc_table = pyarrow.parquet.read_table(node_files[config.document_node_label])
         assert doc_table.num_rows == 1
-        doc_labels = doc_table.column("labels")[0].as_py()
+        doc_labels = doc_table.column("__labels__")[0].as_py()
         assert config.document_node_label in doc_labels
         assert "__Entity__" not in doc_labels, (
             "Lexical document node must not have __Entity__ label"
@@ -480,7 +480,7 @@ async def test_parquet_writer_preserves_lexical_graph_nodes_and_rels() -> None:
         chunk_table = pyarrow.parquet.read_table(node_files[config.chunk_node_label])
         assert chunk_table.num_rows == 2
         for i in range(2):
-            chunk_labels = chunk_table.column("labels")[i].as_py()
+            chunk_labels = chunk_table.column("__labels__")[i].as_py()
             assert config.chunk_node_label in chunk_labels
             assert "__Entity__" not in chunk_labels, (
                 "Lexical chunk node must not have __Entity__ label"
@@ -493,7 +493,7 @@ async def test_parquet_writer_preserves_lexical_graph_nodes_and_rels() -> None:
         # Entity node: must have __Entity__ in labels
         person_table = pyarrow.parquet.read_table(node_files["Person"])
         assert person_table.num_rows == 1
-        person_labels = person_table.column("labels")[0].as_py()
+        person_labels = person_table.column("__labels__")[0].as_py()
         assert "Person" in person_labels
         assert "__Entity__" in person_labels
 
@@ -524,26 +524,26 @@ async def test_parquet_writer_preserves_lexical_graph_nodes_and_rels() -> None:
         from_doc_table = pyarrow.parquet.read_table(rel_files[chunk_doc_key])
         assert from_doc_table.num_rows == 1
         assert (
-            from_doc_table.column("type")[0].as_py()
+            from_doc_table.column("__type__")[0].as_py()
             == config.chunk_to_document_relationship_type
         )
-        assert from_doc_table.column("from")[0].as_py() == "chunk-1"
-        assert from_doc_table.column("to")[0].as_py() == "doc-1"
+        assert from_doc_table.column("__from__")[0].as_py() == "chunk-1"
+        assert from_doc_table.column("__to__")[0].as_py() == "doc-1"
 
         next_chunk_table = pyarrow.parquet.read_table(rel_files[chunk_chunk_key])
         assert next_chunk_table.num_rows == 1
         assert (
-            next_chunk_table.column("type")[0].as_py()
+            next_chunk_table.column("__type__")[0].as_py()
             == config.next_chunk_relationship_type
         )
-        assert next_chunk_table.column("from")[0].as_py() == "chunk-1"
-        assert next_chunk_table.column("to")[0].as_py() == "chunk-2"
+        assert next_chunk_table.column("__from__")[0].as_py() == "chunk-1"
+        assert next_chunk_table.column("__to__")[0].as_py() == "chunk-2"
 
         node_to_chunk_table = pyarrow.parquet.read_table(rel_files[node_to_chunk_key])
         assert node_to_chunk_table.num_rows == 1
         assert (
-            node_to_chunk_table.column("type")[0].as_py()
+            node_to_chunk_table.column("__type__")[0].as_py()
             == config.node_to_chunk_relationship_type
         )
-        assert node_to_chunk_table.column("from")[0].as_py() == "p1"
-        assert node_to_chunk_table.column("to")[0].as_py() == "chunk-1"
+        assert node_to_chunk_table.column("__from__")[0].as_py() == "p1"
+        assert node_to_chunk_table.column("__to__")[0].as_py() == "chunk-1"
