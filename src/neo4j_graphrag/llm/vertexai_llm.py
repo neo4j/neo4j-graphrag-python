@@ -117,7 +117,7 @@ class VertexAILLM(LLMBase):
     """Interface for large language models on Vertex AI
 
     Args:
-        model_name (str, optional): Name of the LLM to use. Defaults to "gemini-2.5-flash".
+        model_name (str, optional): Name of the LLM to use. Defaults to "gemini-3.8-flash".
             Model availability is scoped to your project and region, so a model that
             works elsewhere may 404 for you; pass an explicit name if so.
         model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
@@ -137,7 +137,7 @@ class VertexAILLM(LLMBase):
 
         generation_config = GenerationConfig(temperature=0.0)
         llm = VertexAILLM(
-            model_name="gemini-2.5-flash", generation_config=generation_config
+            model_name="gemini-3.8-flash", generation_config=generation_config
         )
         llm.invoke("Who is the mother of Paul Atreides?")
     """
@@ -146,7 +146,7 @@ class VertexAILLM(LLMBase):
 
     def __init__(
         self,
-        model_name: str = "gemini-2.5-flash",
+        model_name: str = "gemini-3.8-flash",
         model_params: Optional[dict[str, Any]] = None,
         system_instruction: Optional[str] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
