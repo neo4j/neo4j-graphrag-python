@@ -300,6 +300,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM: {e}") from e
 
+    @rate_limit_handler_decorator
     def invoke_with_tools(
         self,
         input: str,
@@ -321,6 +322,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
         except Exception as e:
             raise LLMGenerationError(f"Error calling GeminiLLM with tools: {e}") from e
 
+    @async_rate_limit_handler_decorator
     async def ainvoke_with_tools(
         self,
         input: str,
