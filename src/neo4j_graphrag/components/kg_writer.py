@@ -26,9 +26,11 @@ from neo4j_graphrag.components.filename_collision_handler import (
     FilenameCollisionHandler,
 )
 from neo4j_graphrag.components.parquet_formatter import (
-    INTERNAL_ID_PROPERTY,
+    NODE_INTERNAL_ID_PROPERTY,
     Neo4jGraphParquetFormatter,
     PARQUET_NEO4J_TYPE_METADATA_KEY,
+    RELATIONSHIP_FROM_ID_PROPERTY,
+    RELATIONSHIP_TO_ID_PROPERTY,
 )
 from neo4j_graphrag.components.parquet_output import (
     ParquetOutputDestination,
@@ -428,7 +430,7 @@ class ParquetWriter(KGWriter):
                 pk_names = (
                     meta.primary_key_property_names
                     if meta.primary_key_property_names
-                    else [INTERNAL_ID_PROPERTY]
+                    else [NODE_INTERNAL_ID_PROPERTY]
                 )
                 uq_names = meta.uniqueness_property_names or []
                 columns = _build_columns_from_schema(
@@ -477,7 +479,7 @@ class ParquetWriter(KGWriter):
                 end_node_source = meta.relationship_tail or ""
                 columns = _build_columns_from_schema(
                     meta.schema,
-                    ["from", "to"],
+                    [RELATIONSHIP_FROM_ID_PROPERTY, RELATIONSHIP_TO_ID_PROPERTY],
                     [],
                 )
                 rel_name = (
@@ -512,13 +514,13 @@ class ParquetWriter(KGWriter):
                     "start_node_primary_keys": (
                         meta.head_primary_key_property_names
                         if meta.head_primary_key_property_names
-                        else [INTERNAL_ID_PROPERTY]
+                        else [NODE_INTERNAL_ID_PROPERTY]
                     ),
                     "end_node_source": end_node_source,
                     "end_node_primary_keys": (
                         meta.tail_primary_key_property_names
                         if meta.tail_primary_key_property_names
-                        else [INTERNAL_ID_PROPERTY]
+                        else [NODE_INTERNAL_ID_PROPERTY]
                     ),
                 }
                 if rel_constraints_meta:
