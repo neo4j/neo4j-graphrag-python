@@ -14,6 +14,10 @@
 - Embedders now have a `embedding_model_name` property that defaults to an empty string and must be implemented for subclasses for the real model name to be properly saved in the database.
 - Chunk node metadata now contains `embedding_model_name` which is saved as a new property on Chunk nodes in Neo4j.
 
+### Fixed
+
+- Fixed `supports_search_clause` to correctly identify Aura 5.27.0 as SEARCH-capable. Aura pins `dbms.components()` to `5.27.0` regardless of the underlying engine, so only an exact version match is used (previously a `>= 5.27.0` check incorrectly matched year-based Aura strings like `2025.x`). Closes #601.
+
 
 ## 1.23.0
 
@@ -97,7 +101,6 @@
 - Fixed a bug in `AnthropicLLM` where an `http_client` passed via kwargs (whether an `httpx.Client` or `httpx.AsyncClient`) was forwarded to both the sync `anthropic.Anthropic` and async `anthropic.AsyncAnthropic` clients, causing a type mismatch. `http_client` is now routed to the matching sync/async client only; other kwargs remain shared. An `http_client` of an unrecognized type now emits a warning and is ignored instead of raising, matching `OpenAILLM`'s existing behavior.
 - Vector and VectorCypher retrievers on Neo4j 2026+: prefix SEARCH queries with `CYPHER 25` and fall back to procedure-based vector search when SEARCH is unsupported or fails.
 - E2E tests: added exponential backoff retry logic with jitter (5 attempts, 5–60 second waits) to embedding model downloads to handle Hugging Face rate limits. Retries only on transient network errors (connection, timeout) and immediately fails on unrecoverable errors (missing packages, permissions), improving test reliability in parallel CI runs.
-- Fixed `supports_search_clause` to correctly identify Aura 5.27.0 as SEARCH-capable. Aura pins `dbms.components()` to `5.27.0` regardless of the underlying engine, so only an exact version match is used (previously a `>= 5.27.0` check incorrectly matched year-based Aura strings like `2025.x`). Closes #601.
 
 ## 1.18.0
 
