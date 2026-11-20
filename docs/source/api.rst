@@ -318,6 +318,21 @@ CohereEmbeddings
 .. autoclass:: neo4j_graphrag.embeddings.cohere.CohereEmbeddings
     :members:
 
+VoyageAIEmbeddings
+==================
+
+.. autoclass:: neo4j_graphrag.embeddings.voyageai.VoyageAIEmbeddings
+    :members:
+
+VoyageAIContextualizedEmbeddings
+================================
+
+.. autoclass:: neo4j_graphrag.embeddings.voyageai.VoyageAIContextualizedEmbeddings
+    :members:
+
+.. autoclass:: neo4j_graphrag.embeddings.voyageai.ContextualizedDocumentEmbeddings
+    :members:
+
 **********
 Generation
 **********
