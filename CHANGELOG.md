@@ -2,6 +2,10 @@
 
 ## Next
 
+### Changed
+
+- Changed internal column names in ParquetFormatter to avoid collisions with real properties.
+
 ## 1.24.0
 
 ### Added

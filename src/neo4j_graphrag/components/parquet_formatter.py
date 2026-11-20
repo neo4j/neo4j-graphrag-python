@@ -42,11 +42,30 @@ from neo4j_graphrag.components.types import (
     Neo4jNode,
     Neo4jRelationship,
 )
+from neo4j_graphrag.schema import BASE_ENTITY_LABEL
 
 logger = logging.getLogger(__name__)
 
-INTERNAL_ID_PROPERTY = "__id__"
+NODE_INTERNAL_ID_PROPERTY = "__id__"
 """Parquet column name for the graph-internal node identifier (not a user property)."""
+
+NODE_LABELS_PROPERTY = "__labels__"
+"""Parquet column name for the graph-internal node labels (not a user property)."""
+
+RELATIONSHIP_FROM_ID_PROPERTY = "__from__"
+"""Parquet column name for the graph-internal relationship source node identifier (not a user property)."""
+
+RELATIONSHIP_TO_ID_PROPERTY = "__to__"
+"""Parquet column name for the graph-internal relationship target node identifier (not a user property)."""
+
+RELATIONSHIP_FROM_LABEL_PROPERTY = "__from_label__"
+"""Parquet column name for the graph-internal relationship source node label (not a user property)."""
+
+RELATIONSHIP_TO_LABEL_PROPERTY = "__to_label__"
+"""Parquet column name for the graph-internal relationship target node label (not a user property)."""
+
+RELATIONSHIP_TYPE_PROPERTY = "__type__"
+"""Parquet column name for the graph-internal relationship type (not a user property)."""
 
 PARQUET_NEO4J_TYPE_METADATA_KEY = b"neo4j_type"
 """Arrow field metadata key for the Neo4j / import-spec target property type."""
@@ -322,7 +341,7 @@ def enrich_key_constraints_for_node_type(
     base = get_key_constraints_for_node_type(schema, node_label)
     if base:
         return base
-    return [(INTERNAL_ID_PROPERTY,)]
+    return [(NODE_INTERNAL_ID_PROPERTY,)]
 
 
 def _has_single_property_group(
@@ -344,14 +363,14 @@ def enrich_uniqueness_constraints_for_node_type(
     """
     base = get_uniqueness_constraints_for_node_type(schema, node_label)
     join = get_relationship_join_key_property_name(schema, node_label)
-    if join != INTERNAL_ID_PROPERTY:
+    if join != NODE_INTERNAL_ID_PROPERTY:
         return base
     enriched_keys = enrich_key_constraints_for_node_type(schema, node_label)
-    if _has_single_property_group(enriched_keys, INTERNAL_ID_PROPERTY):
+    if _has_single_property_group(enriched_keys, NODE_INTERNAL_ID_PROPERTY):
         return base
-    if _has_single_property_group(base, INTERNAL_ID_PROPERTY):
+    if _has_single_property_group(base, NODE_INTERNAL_ID_PROPERTY):
         return base
-    return [*base, (INTERNAL_ID_PROPERTY,)]
+    return [*base, (NODE_INTERNAL_ID_PROPERTY,)]
 
 
 def flatten_key_constraint_property_names(
@@ -377,7 +396,7 @@ def get_relationship_join_key_property_name(
     """
     base = get_key_constraints_for_node_type(schema, node_label)
     name = _first_single_property_key_name_from_groups(base)
-    return name if name is not None else INTERNAL_ID_PROPERTY
+    return name if name is not None else NODE_INTERNAL_ID_PROPERTY
 
 
 def get_primary_key_column_names_for_node_type(
@@ -402,7 +421,7 @@ def get_unique_properties_for_node_type(
     warnings.warn(
         "get_unique_properties_for_node_type is deprecated and its meaning has "
         f"changed: it now mirrors get_primary_key_column_names_for_node_type (KEY / "
-        f"{INTERNAL_ID_PROPERTY}), not UNIQUENESS-only lists. Use "
+        f"{NODE_INTERNAL_ID_PROPERTY}), not UNIQUENESS-only lists. Use "
         "get_uniqueness_property_names_for_node_type or "
         "get_primary_key_column_names_for_node_type. "
         "This function will be removed in version 2.0.",
@@ -625,11 +644,11 @@ class Neo4jGraphParquetFormatter:
 
             labels: list[str] = [node.label]
             if node.label not in lexical_graph_config.lexical_graph_node_labels:
-                labels.append("__Entity__")
+                labels.append(BASE_ENTITY_LABEL)
 
             row: dict[str, Any] = {
-                INTERNAL_ID_PROPERTY: node.id,
-                "labels": labels,
+                NODE_INTERNAL_ID_PROPERTY: node.id,
+                NODE_LABELS_PROPERTY: labels,
             }
             if node.properties:
                 row.update(node.properties)
@@ -662,7 +681,7 @@ class Neo4jGraphParquetFormatter:
             ValueError: If the node is missing the key property or if the property value is null
         """
         key_prop = get_relationship_join_key_property_name(self.schema, node.label)
-        if key_prop == INTERNAL_ID_PROPERTY:
+        if key_prop == NODE_INTERNAL_ID_PROPERTY:
             return node.id
         if key_prop not in node.properties:
             # the Key property is missing from the node properties
@@ -720,11 +739,11 @@ class Neo4jGraphParquetFormatter:
                 continue
 
             row: dict[str, Any] = {
-                "from": from_id,
-                "to": to_id,
-                "from_label": start_node.label,
-                "to_label": end_node.label,
-                "type": rel.type,
+                RELATIONSHIP_FROM_ID_PROPERTY: from_id,
+                RELATIONSHIP_TO_ID_PROPERTY: to_id,
+                RELATIONSHIP_FROM_LABEL_PROPERTY: start_node.label,
+                RELATIONSHIP_TO_LABEL_PROPERTY: end_node.label,
+                RELATIONSHIP_TYPE_PROPERTY: rel.type,
             }
 
             if rel.properties:
@@ -975,7 +994,7 @@ class Neo4jGraphParquetFormatter:
             # Store metadata
             labels_list = [current_label]
             if current_label not in lexical_graph_config.lexical_graph_node_labels:
-                labels_list.append("__Entity__")
+                labels_list.append(BASE_ENTITY_LABEL)
 
             enriched_keys = enrich_key_constraints_for_node_type(self.schema, label)
             enriched_uniques = enrich_uniqueness_constraints_for_node_type(
