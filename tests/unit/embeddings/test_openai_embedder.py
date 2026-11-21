@@ -48,6 +48,56 @@ def test_openai_embedder_happy_path(mock_import: Mock) -> None:
     res = embedder.embed_query("my text")
     assert isinstance(res, list)
     assert res == [1.0, 2.0]
+    mock_openai.OpenAI.return_value.embeddings.create.assert_called_once_with(
+        input="my text",
+        model="text-embedding-ada-002",
+    )
+
+
+@patch("builtins.__import__")
+def test_openai_embedder_dimensions(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    mock_openai.OpenAI.return_value.embeddings.create.return_value = MagicMock(
+        data=[MagicMock(embedding=[1.0, 2.0])],
+    )
+    embedder = OpenAIEmbeddings(
+        model="text-embedding-3-large",
+        dimensions=1024,
+        api_key="my key",
+    )
+    res = embedder.embed_query("my text")
+    assert isinstance(res, list)
+    assert res == [1.0, 2.0]
+    mock_openai.OpenAI.return_value.embeddings.create.assert_called_once_with(
+        input="my text",
+        model="text-embedding-3-large",
+        dimensions=1024,
+    )
+
+
+@patch("builtins.__import__")
+def test_openai_embedder_embed_query_dimensions_override(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    mock_openai.OpenAI.return_value.embeddings.create.return_value = MagicMock(
+        data=[MagicMock(embedding=[1.0, 2.0])],
+    )
+    embedder = OpenAIEmbeddings(
+        model="text-embedding-3-large",
+        dimensions=1024,
+        api_key="my key",
+    )
+    res = embedder.embed_query("my text", dimensions=256)
+    assert isinstance(res, list)
+    assert res == [1.0, 2.0]
+    mock_openai.OpenAI.return_value.embeddings.create.assert_called_once_with(
+        input="my text",
+        model="text-embedding-3-large",
+        dimensions=256,
+    )
 
 
 @patch("builtins.__import__", side_effect=ImportError)
@@ -73,6 +123,31 @@ def test_azure_openai_embedder_happy_path(mock_import: Mock) -> None:
     res = embedder.embed_query("my text")
     assert isinstance(res, list)
     assert res == [1.0, 2.0]
+
+
+@patch("builtins.__import__")
+def test_azure_openai_embedder_dimensions(mock_import: Mock) -> None:
+    mock_openai = get_mock_openai()
+    mock_import.return_value = mock_openai
+
+    mock_openai.AzureOpenAI.return_value.embeddings.create.return_value = MagicMock(
+        data=[MagicMock(embedding=[1.0, 2.0])],
+    )
+    embedder = AzureOpenAIEmbeddings(
+        model="text-embedding-3-large",
+        dimensions=1024,
+        azure_endpoint="https://test.openai.azure.com/",
+        api_key="my key",
+        api_version="version",
+    )
+    res = embedder.embed_query("my text")
+    assert isinstance(res, list)
+    assert res == [1.0, 2.0]
+    mock_openai.AzureOpenAI.return_value.embeddings.create.assert_called_once_with(
+        input="my text",
+        model="text-embedding-3-large",
+        dimensions=1024,
+    )
 
 
 def test_azure_openai_embedder_does_not_call_openai_client() -> None:
