@@ -14,6 +14,7 @@
 #  limitations under the License.
 import logging
 import tempfile
+import uuid
 from pathlib import Path
 
 import neo4j
@@ -148,6 +149,93 @@ async def test_kg_writer_no_neo4j_deprecation_warning(
             assert False, f"Deprecation warning found in logs: {record.message}"
 
     assert res.status == "SUCCESS"
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("setup_neo4j_for_kg_construction")
+async def test_kg_writer_persists_relationship_to_existing_chunk(
+    driver: neo4j.Driver,
+) -> None:
+    """Persist node-to-chunk relationships for both new and existing chunks."""
+    config = LexicalGraphConfig(
+        chunk_node_label="ReproChunk",
+        chunk_id_property="chunk_key",
+        node_to_chunk_relationship_type="MENTIONS_CHUNK",
+    )
+    repro_id = f"writer-existing-chunk-{uuid.uuid4().hex}"
+    existing_chunk_id = f"existing-{repro_id}"
+    control_chunk_id = f"control-{repro_id}"
+    control_entity_id = f"control-entity-{repro_id}"
+    experimental_entity_id = f"experimental-entity-{repro_id}"
+
+    driver.execute_query(
+        f"CREATE (c:`{config.chunk_node_label}` {{{config.chunk_id_property}: $chunk_id, repro_id: $repro_id}})",
+        chunk_id=existing_chunk_id,
+        repro_id=repro_id,
+    )
+    graph = Neo4jGraph(
+        nodes=[
+            Neo4jNode(
+                id=control_entity_id,
+                label="Person",
+                properties={"name": "Writer control", "repro_id": repro_id},
+            ),
+            Neo4jNode(
+                id=control_chunk_id,
+                label=config.chunk_node_label,
+                properties={
+                    config.chunk_id_property: control_chunk_id,
+                    "repro_id": repro_id,
+                },
+            ),
+            Neo4jNode(
+                id=experimental_entity_id,
+                label="Person",
+                properties={
+                    "name": "Writer experimental",
+                    "repro_id": repro_id,
+                },
+            ),
+        ],
+        relationships=[
+            Neo4jRelationship(
+                start_node_id=control_entity_id,
+                end_node_id=control_chunk_id,
+                type=config.node_to_chunk_relationship_type,
+                properties={"repro_id": repro_id},
+            ),
+            Neo4jRelationship(
+                start_node_id=experimental_entity_id,
+                end_node_id=existing_chunk_id,
+                type=config.node_to_chunk_relationship_type,
+                properties={"repro_id": repro_id},
+            ),
+        ],
+    )
+
+    result = await Neo4jWriter(driver=driver).run(
+        graph=graph,
+        lexical_graph_config=config,
+    )
+    assert result.status == "SUCCESS"
+
+    records = driver.execute_query(
+        f"""
+        MATCH (e:Person {{repro_id: $repro_id}})
+        OPTIONAL MATCH (e)-[r:`{config.node_to_chunk_relationship_type}` {{repro_id: $repro_id}}]->(c)
+        RETURN count(DISTINCT e) AS entities, count(r) AS relationships,
+               count(CASE WHEN e.name = 'Writer control' THEN r END) AS control_relationships,
+               count(CASE WHEN e.name = 'Writer experimental' THEN r END) AS experimental_relationships,
+               count(DISTINCT CASE WHEN c:`{config.chunk_node_label}` THEN c END) AS chunks
+        """,
+        repro_id=repro_id,
+    ).records
+    counts = records[0]
+    assert counts["entities"] == 2
+    assert counts["relationships"] == 2
+    assert counts["control_relationships"] == 1
+    assert counts["experimental_relationships"] == 1
+    assert counts["chunks"] == 2
 
 
 class _LocalParquetDestination:
