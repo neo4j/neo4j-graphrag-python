@@ -13,6 +13,7 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+from .decision_walk import DecisionWalkRetriever
 from .hybrid import HybridCypherRetriever, HybridRetriever
 from .text2cypher import Text2CypherRetriever
 from .tools_retriever import ToolsRetriever
@@ -25,6 +26,7 @@ __all__ = [
     "HybridCypherRetriever",
     "Text2CypherRetriever",
     "ToolsRetriever",
+    "DecisionWalkRetriever",
 ]
 
 

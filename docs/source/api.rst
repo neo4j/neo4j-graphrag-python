@@ -229,6 +229,13 @@ ToolsRetriever
     :members: search
 
 
+DecisionWalkRetriever
+=====================
+
+.. autoclass:: neo4j_graphrag.retrievers.DecisionWalkRetriever
+    :members: search
+
+
 *******************
 External Retrievers
 *******************
@@ -255,6 +262,29 @@ QdrantNeo4jRetriever
 
 .. autoclass:: neo4j_graphrag.retrievers.external.qdrant.qdrant.QdrantNeo4jRetriever
     :members: search
+
+
+***************
+Decision models
+***************
+
+A decision model doesn't generate text. It reads a state and a set of options, and it
+returns a probability for every option. The
+:ref:`DecisionWalkRetriever <decision-walk-retriever-user-guide>` uses a decision model to
+choose each step of a walk through the graph.
+
+DecisionModelInterface
+======================
+
+.. autoclass:: neo4j_graphrag.decision.DecisionModelInterface
+    :members: decide, adecide
+
+
+OpenRouterDecisionModel
+=======================
+
+.. autoclass:: neo4j_graphrag.decision.OpenRouterDecisionModel
+    :members: decide, adecide, close, aclose
 
 
 ********
@@ -572,6 +602,10 @@ Errors
 
   * :class:`neo4j_graphrag.exceptions.Text2CypherRetrievalError`
 
+  * :class:`neo4j_graphrag.exceptions.DecisionModelError`
+
+  * :class:`neo4j_graphrag.exceptions.DecisionWalkRetrievalError`
+
   * :class:`neo4j_graphrag.exceptions.SchemaFetchError`
 
   * :class:`neo4j_graphrag.exceptions.RagInitializationError`
@@ -675,6 +709,20 @@ Text2CypherRetrievalError
 =========================
 
 .. autoclass:: neo4j_graphrag.exceptions.Text2CypherRetrievalError
+   :show-inheritance:
+
+
+DecisionModelError
+==================
+
+.. autoclass:: neo4j_graphrag.exceptions.DecisionModelError
+   :show-inheritance:
+
+
+DecisionWalkRetrievalError
+==========================
+
+.. autoclass:: neo4j_graphrag.exceptions.DecisionWalkRetrievalError
    :show-inheritance:
 
 

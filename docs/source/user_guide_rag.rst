@@ -579,6 +579,8 @@ We provide implementations for the following retrievers:
      - Uses an LLM to intelligently select and execute appropriate tools based on user queries. Combines results from multiple tools with proper attribution.
    * - :ref:`Text2Cypher <text2cypher-retriever-user-guide>`
      - Translates the user question into a Cypher query to be run against a Neo4j database (or Knowledge Graph). The results of the query are then passed to the LLM to generate the final answer.
+   * - :ref:`DecisionWalkRetriever <decision-walk-retriever-user-guide>`
+     - Walks the graph one step at a time, and a decision model chooses which relationship to follow and when to stop. No LLM or embedding model is used to retrieve. It returns the nodes that the walk ended on and the paths that reached them.
    * - :ref:`WeaviateNeo4jRetriever <weaviate-neo4j-retriever-user-guide>`
      - Use this retriever when vectors are saved in a Weaviate vector database
    * - :ref:`PineconeNeo4jRetriever <pinecone-neo4j-retriever-user-guide>`
@@ -1158,6 +1160,160 @@ LLMs can be different.
 
 
 See :ref:`text2cypherretriever`.
+
+.. _decision-walk-retriever-user-guide:
+
+Decision Walk Retriever
+-----------------------
+
+The decision walk retriever answers a question by walking the graph one step at a time,
+and a *decision model* chooses each step. A decision model doesn't write text. It reads a
+situation and a list of options, and it returns a probability for every option. The walk
+only suits questions that follow relationships from a named entity, so the section
+:ref:`When to use it <decision-walk-when-to-use>` shows how to send other questions to the
+Text2Cypher retriever.
+
+1. Start. The walk starts at the nodes in ``start_node_ids``. If they aren't given, a
+   search of a full-text index for the question finds candidate nodes, and the decision
+   model chooses the node that the question is about.
+2. Step. The relationships of the current nodes are grouped into options, with one option
+   for each relationship type and direction, e.g., "follow ACTED_IN (incoming) to: Keanu
+   Reeves, Hugo Weaving, ...". Option 0 is always STOP. The decision model chooses one
+   option, and the walk moves to all the nodes of that option.
+3. Stop. The walk ends when the model chooses STOP, when there is nothing left to follow,
+   or after ``max_steps`` steps.
+
+The search returns one item for each node that the walk ended on, up to
+``max_result_nodes`` items in order of their names. Each item has the node's properties and
+the chain of relationships that led to it, so the LLM that writes the answer can see why
+the node is a result. The result metadata records every decision, with the probability of
+every option and the billed cost of the decision calls.
+
+.. code:: python
+
+    from neo4j import GraphDatabase
+    from neo4j_graphrag.decision import OpenRouterDecisionModel
+    from neo4j_graphrag.retrievers import DecisionWalkRetriever
+
+    URI = "neo4j://localhost:7687"
+    AUTH = ("neo4j", "password")
+
+    driver = GraphDatabase.driver(URI, auth=AUTH)
+
+    # A full-text index on the properties that name your nodes. The retriever uses it to
+    # find the start node.
+    driver.execute_query(
+        "CREATE FULLTEXT INDEX names IF NOT EXISTS "
+        "FOR (n:Person|Movie) ON EACH [n.name, n.title]"
+    )
+    driver.execute_query("CALL db.awaitIndexes()")
+
+    decision_model = OpenRouterDecisionModel(
+        "liquid/d1-ultra",  # reads OPENROUTER_API_KEY from the environment
+    )
+    retriever = DecisionWalkRetriever(
+        driver,
+        decision_model,
+        fulltext_index_name="names",
+        node_name_properties=["name", "title"],
+    )
+
+    result = retriever.search(query_text="Who directed the movies Hugo Weaving acted in?")
+    for item in result.items:
+        print(item.content)
+    # Each item reads like:
+    # <name> (:<labels>) | path: Hugo Weaving -[ACTED_IN]-> <movie> <-[DIRECTED]- <name> | properties: ...
+    print(result.metadata["stopped_by"], result.metadata["decision_cost"])
+
+If you already know where the walk should start, pass the element ids of the start nodes.
+You don't need a full-text index then:
+
+.. code:: python
+
+    retriever.search(query_text="...", start_node_ids=["4:9f0c...:12"])
+
+With ``GraphRAG``, pass the search parameters in ``retriever_config``:
+
+.. code:: python
+
+    from neo4j_graphrag.generation import GraphRAG
+    from neo4j_graphrag.llm import OpenAILLM
+
+    rag = GraphRAG(retriever=retriever, llm=OpenAILLM(model_name="gpt-4o-mini"))
+    rag.search("Who directed the movies Hugo Weaving acted in?", retriever_config={"max_steps": 4})
+
+.. warning::
+
+    Using `OpenRouterDecisionModel` requires the `httpx` Python client. You can install it with `pip install "neo4j_graphrag[openrouter]"`.
+
+.. note::
+
+    OpenRouter's decision API is still in alpha. By default, a request is retried up to 5
+    times after a rate limit (HTTP 429), a timeout or a server error. A request that timed
+    out may still have been answered, so a retry can be billed twice. When the retries run
+    out, ``tenacity.RetryError`` is raised, as it is for the library's LLMs.
+
+.. note::
+
+    Some graphs have nodes with a very large number of relationships. On such graphs,
+    ``max_frontier_nodes`` (1,000 by default) limits how many nodes one step moves to. The
+    steps where the limit was applied are listed in ``result.metadata["truncated_steps"]``.
+
+.. note::
+
+    A decision model accepts a limited number of options in one call (``max_options``, 255
+    by default). If a step has more options, the options are split into buckets of even
+    size, and the model picks a winner in each bucket. The winners and STOP then go to a
+    final round.
+
+.. _decision-walk-when-to-use:
+
+When to use it
+~~~~~~~~~~~~~~
+
+The walk suits questions that start from a named entity and follow relationships, e.g.,
+"Which movies did Hugo Weaving act in?" or "Who directed the movies Tom Hanks acted in?".
+The walk can't count, average, rank, sort or filter by property values, and it needs a
+named entity to start from. For those questions, use the
+:ref:`Text2Cypher retriever <text2cypher-retriever-user-guide>`.
+
+To answer both kinds of question, give each retriever to the
+:ref:`ToolsRetriever <tools-retriever-user-guide>` as a tool, and say in each tool's
+description which questions it is for. An LLM then picks a tool for each question:
+
+.. code:: python
+
+    from neo4j_graphrag.retrievers import ToolsRetriever
+    from neo4j_graphrag.tool import ObjectParameter, StringParameter, Tool
+
+    question_only = ObjectParameter(
+        description="Parameters for the search",
+        properties={"query_text": StringParameter(description="The user's question")},
+        required_properties=["query_text"],
+        additional_properties=False,
+    )
+    walk_tool = Tool(
+        name="follow_relationships",
+        description="Finds things connected to a specific, named entity by following "
+        "relationships. Don't use it for counting, averages, rankings or filtering by values.",
+        parameters=question_only,
+        execute_func=lambda query_text: walk_retriever.search(query_text=query_text),
+    )
+    cypher_tool = Tool(
+        name="query_database",
+        description="Writes and runs a database query. Use it for questions that count, "
+        "average, rank, sort or filter by property values.",
+        parameters=question_only,
+        execute_func=lambda query_text: text2cypher_retriever.search(query_text=query_text),
+    )
+    retriever = ToolsRetriever(driver=driver, llm=llm, tools=[walk_tool, cypher_tool])
+
+A complete example is in ``examples/retrieve/tools/decision_walk_or_text2cypher_example.py``.
+
+To use another decision model provider, implement
+:class:`neo4j_graphrag.decision.DecisionModelInterface`.
+
+See :ref:`decisionwalkretriever`.
 
 .. _tools-retriever-user-guide:
 

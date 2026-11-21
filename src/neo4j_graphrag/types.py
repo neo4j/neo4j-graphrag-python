@@ -23,6 +23,7 @@ import neo4j
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
     PositiveInt,
     field_validator,
     model_validator,
@@ -296,6 +297,53 @@ class Text2CypherRetrieverModel(BaseModel):
     result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
     custom_prompt: Optional[str] = None
     neo4j_database: Optional[str] = None
+
+
+class DecisionModelModel(BaseModel):
+    decision_model: Any
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    @field_validator("decision_model")
+    def check_decision_model(cls, value: object) -> object:
+        if not callable(getattr(value, "decide", None)):
+            raise ValueError(
+                "Provided decision_model object must have a 'decide' callable method."
+            )
+        max_options = getattr(value, "max_options", None)
+        if not isinstance(max_options, int) or max_options < 2:
+            raise ValueError(
+                "Provided decision_model object must have an integer 'max_options' "
+                "of at least 2."
+            )
+        return value
+
+
+class DecisionWalkRetrieverModel(BaseModel):
+    driver_model: Neo4jDriverModel
+    decision_model_model: DecisionModelModel
+    fulltext_index_name: Optional[str] = None
+    node_name_properties: list[str] = ["name", "title", "id"]
+    max_steps: PositiveInt = 3
+    seed_top_k: PositiveInt = 10
+    max_names_in_option: PositiveInt = 10
+    max_result_nodes: PositiveInt = 100
+    max_frontier_nodes: PositiveInt = 1000
+    instructions: Optional[str] = None
+    seed_instructions: Optional[str] = None
+    result_formatter: Optional[Callable[[neo4j.Record], RetrieverResultItem]] = None
+    neo4j_database: Optional[str] = None
+
+    @field_validator("node_name_properties")
+    def check_node_name_properties_not_empty(cls, v: list[str]) -> list[str]:
+        if len(v) == 0:
+            raise ValueError("node_name_properties cannot be an empty list")
+        return v
+
+
+class DecisionWalkSearchModel(BaseModel):
+    query_text: str
+    start_node_ids: Optional[list[str]] = Field(default=None, min_length=1)
+    max_steps: Optional[PositiveInt] = None
 
 
 class Neo4jMessageHistoryModel(BaseModel):
