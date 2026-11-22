@@ -2,14 +2,22 @@
 
 ## Next
 
+### Changed
+
+- Changed internal column names in ParquetFormatter to avoid collisions with real properties.
+
+## 1.24.0
+
 ### Added
 
+- Minimal examples of the new dataflow pipeline (`neo4j_graphrag.pipeline.Pipeline`) in `examples/pipeline/`, showing modularity, stage configuration, error handling and composition of knowledge-graph components.
 - Embedders now have a `embedding_model_name` property that defaults to an empty string and must be implemented for subclasses for the real model name to be properly saved in the database.
 - Chunk node metadata now contains `embedding_model_name` which is saved as a new property on Chunk nodes in Neo4j.
 
 ### Fixed
 
 - `BedrockLLM` and `GeminiLLM` `invoke_with_tools` / `ainvoke_with_tools` now go through the rate limit handler, like `invoke` / `ainvoke`, so a 429 or throttling response is retried instead of failing immediately. `VertexAILLM`'s tool methods go through the handler as well, for parity with its `invoke` / `ainvoke`.
+- Fixed `supports_search_clause` to correctly identify Aura 5.27.0 as SEARCH-capable. Aura pins `dbms.components()` to `5.27.0` regardless of the underlying engine, so only an exact version match is used (previously a `>= 5.27.0` check incorrectly matched year-based Aura strings like `2025.x`). Closes #601.
 
 ## 1.23.0
 

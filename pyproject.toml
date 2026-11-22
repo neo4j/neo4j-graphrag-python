@@ -15,7 +15,7 @@
 
 [project]
 name = "neo4j-graphrag"
-version = "1.23.0"
+version = "1.24.0"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
 authors = [
     {name = "Neo4j, Inc", email = "team-gen-ai@neo4j.com"}
@@ -45,7 +45,7 @@ Repository = "https://github.com/neo4j/neo4j-graphrag-python"
 [project.optional-dependencies]
 weaviate = ["weaviate-client>=4.6.1,<5.0.0"]
 pinecone = ["pinecone-client>=4.1.0,<5.0.0"]
-google = ["google-cloud-aiplatform>=1.66.0,<2.0.0"]
+google = ["google-cloud-aiplatform>=1.66.0,<3.0.0"]
 google-genai = ["google-genai>=1.62.0,<3.0.0"]
 cohere = ["cohere>=5.9.0,<6.0.0"]
 anthropic = ["anthropic>=0.77.0,<2.0.0"]
@@ -88,7 +88,7 @@ examples = [
 # NOTE: spaCy currently has a Python 3.14 import-time failure via its pydantic v1 path
 # (see https://github.com/explosion/spaCy/issues/13895). Until upstream resolves this,
 # only advertise/install the `nlp` extra on Python <3.14.
-nlp = ["spacy==3.8.16; python_version < '3.14'"]
+nlp = ["spacy==3.8.18; python_version < '3.14'"]
 fuzzy-matching = ["rapidfuzz>=3.12.2,<4.0.0"]
 
 [dependency-groups]
@@ -96,7 +96,7 @@ dev = [
     "urllib3<3",
     "ruff>=0.3.0,<0.18.0",
     "mypy>=1.10.0,<2.0.0",
-    "pytest>=9.0.3,<9.2.0",
+    "pytest>=9.0.3,<9.3.0",
     "coverage>=7.4.3,<8.0.0",
     "pytest-asyncio>=1.0.0,<2.0.0",
     "pre-commit>=3.6.2,<4.0.0; python_version >= '3.9'",
