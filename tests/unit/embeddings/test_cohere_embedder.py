@@ -140,7 +140,7 @@ def test_cohere_embedder_input_type_cannot_be_passed_positionally(
     mock_cohere: Mock,
 ) -> None:
     with pytest.raises(TypeError):
-        CohereEmbeddings("embed-english-v3.0", None, "search_query")  # type: ignore[misc]
+        CohereEmbeddings("embed-english-v3.0", None, "search_query")  # type: ignore[call-arg]
 
 
 @patch("neo4j_graphrag.embeddings.cohere.cohere")
