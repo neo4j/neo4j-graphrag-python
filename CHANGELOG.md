@@ -5,6 +5,7 @@
 ### Changed
 
 - Changed internal column names in ParquetFormatter to avoid collisions with real properties.
+- The `pinecone` extra now depends on the `pinecone` package (renamed from the deprecated `pinecone-client`), supporting `pinecone>=6.0.0,<11.0.0`.
 
 ## 1.24.0
 
