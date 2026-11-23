@@ -220,7 +220,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             config = self._build_config(system_instruction=system_instruction)
             response = self.client.models.generate_content(
                 model=self.model_name,
-                contents=contents,  # type: ignore[arg-type]
+                contents=contents,
                 config=config,
             )
             return self._parse_content_response(response)
@@ -239,7 +239,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             config = self._build_config(system_instruction=system_instruction)
             response = await self.client.aio.models.generate_content(
                 model=self.model_name,
-                contents=contents,  # type: ignore[arg-type]
+                contents=contents,
                 config=config,
             )
             return self._parse_content_response(response)
@@ -266,7 +266,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             )
             response = self.client.models.generate_content(
                 model=self.model_name,
-                contents=contents,  # type: ignore[arg-type]
+                contents=contents,
                 config=config,
             )
             return self._parse_content_response(response)
@@ -293,7 +293,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             )
             response = await self.client.aio.models.generate_content(
                 model=self.model_name,
-                contents=contents,  # type: ignore[arg-type]
+                contents=contents,
                 config=config,
             )
             return self._parse_content_response(response)
@@ -314,7 +314,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             )
             response = self.client.models.generate_content(
                 model=self.model_name,
-                contents=contents,  # type: ignore[arg-type]
+                contents=contents,
                 config=config,
             )
             return self._parse_tool_response(response)
@@ -335,7 +335,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
             )
             response = await self.client.aio.models.generate_content(
                 model=self.model_name,
-                contents=contents,  # type: ignore[arg-type]
+                contents=contents,
                 config=config,
             )
             return self._parse_tool_response(response)
