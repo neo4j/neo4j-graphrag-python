@@ -15,7 +15,7 @@
 import subprocess
 import sys
 import warnings
-from typing import Generator, List
+from typing import Any, Dict, Generator, List
 from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import cohere.core
@@ -328,41 +328,49 @@ def test_cohere_llm_constructs_against_the_real_sdk() -> None:
     assert "ok" in result.stdout
 
 
-def test_cohere_llm_invoke_passes_model_params(mock_cohere: Mock) -> None:
+@pytest.mark.parametrize(
+    "model_kwargs",
+    [{}, {"model_params": {"temperature": 0.1, "max_tokens": 50}}],
+    ids=["omitted", "configured"],
+)
+def test_cohere_llm_invoke_passes_model_params(
+    mock_cohere: Mock, model_kwargs: Dict[str, Any]
+) -> None:
     chat_response_mock = MagicMock()
     chat_response_mock.message.content = [MagicMock(text="cohere response text")]
     mock_chat = mock_cohere.ClientV2.return_value.chat
     mock_chat.return_value = chat_response_mock
-    llm = CohereLLM(
-        model_name="something", model_params={"temperature": 0.1, "max_tokens": 50}
-    )
+    llm = CohereLLM(model_name="something", **model_kwargs)
 
     llm.invoke("my text")
     llm.invoke([{"role": "user", "content": "my text"}])
 
     assert mock_chat.call_count == 2
+    expected_kwargs = {"model": "something", **model_kwargs.get("model_params", {})}
     for call in mock_chat.call_args_list:
-        assert call.kwargs["temperature"] == 0.1
-        assert call.kwargs["max_tokens"] == 50
-        assert call.kwargs["model"] == "something"
+        assert call.kwargs == {"messages": call.kwargs["messages"], **expected_kwargs}
 
 
 @pytest.mark.asyncio
-async def test_cohere_llm_ainvoke_passes_model_params(mock_cohere: Mock) -> None:
+@pytest.mark.parametrize(
+    "model_kwargs",
+    [{}, {"model_params": {"temperature": 0.1, "max_tokens": 50}}],
+    ids=["omitted", "configured"],
+)
+async def test_cohere_llm_ainvoke_passes_model_params(
+    mock_cohere: Mock, model_kwargs: Dict[str, Any]
+) -> None:
     chat_response_mock = MagicMock(
         message=MagicMock(content=[MagicMock(text="cohere response text")])
     )
     mock_chat = AsyncMock(return_value=chat_response_mock)
     mock_cohere.AsyncClientV2.return_value.chat = mock_chat
-    llm = CohereLLM(
-        model_name="something", model_params={"temperature": 0.1, "max_tokens": 50}
-    )
+    llm = CohereLLM(model_name="something", **model_kwargs)
 
     await llm.ainvoke("my text")
     await llm.ainvoke([{"role": "user", "content": "my text"}])
 
     assert mock_chat.call_count == 2
+    expected_kwargs = {"model": "something", **model_kwargs.get("model_params", {})}
     for call in mock_chat.call_args_list:
-        assert call.kwargs["temperature"] == 0.1
-        assert call.kwargs["max_tokens"] == 50
-        assert call.kwargs["model"] == "something"
+        assert call.kwargs == {"messages": call.kwargs["messages"], **expected_kwargs}
