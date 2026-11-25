@@ -12,6 +12,10 @@ class CustomEmbeddings(Embedder):
     def embed_query(self, input: str) -> list[float]:
         return [random.random() for _ in range(self.dimension)]
 
+    @property
+    def embedding_model_name(self) -> str:
+        return "random"
+
 
 llm = CustomEmbeddings(dimension=1024)
 res = llm.embed_query("text")

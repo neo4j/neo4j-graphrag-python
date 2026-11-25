@@ -26,9 +26,11 @@ from neo4j_graphrag.components.filename_collision_handler import (
     FilenameCollisionHandler,
 )
 from neo4j_graphrag.components.parquet_formatter import (
-    INTERNAL_ID_PROPERTY,
+    NODE_INTERNAL_ID_PROPERTY,
     Neo4jGraphParquetFormatter,
     PARQUET_NEO4J_TYPE_METADATA_KEY,
+    RELATIONSHIP_FROM_ID_PROPERTY,
+    RELATIONSHIP_TO_ID_PROPERTY,
 )
 from neo4j_graphrag.components.parquet_output import (
     ParquetOutputDestination,
@@ -143,8 +145,11 @@ class KGWriterModel(DataModel):
               ``is_primary_key``, and ``is_unique`` (KEY / synthetic ``__id__`` / ``from``/``to``
               vs UNIQUENESS constraints per :class:`~neo4j_graphrag.components.schema.GraphSchema`).
               Node files include a ``constraints`` list with ``KEY``, ``UNIQUENESS``, and node-scoped
-              ``EXISTENCE`` entries (grouped ``properties`` lists), plus at least one single-property
-              ``KEY`` (``__id__`` is injected when the schema has none). Node files whose
+              ``EXISTENCE`` entries (grouped ``properties`` lists). A synthetic single-property
+              ``KEY`` on ``__id__`` is injected only when the schema has no KEY for that label.
+              When a semantic KEY exists but relationship joins still use ``__id__``
+              (composite-only KEY), a synthetic ``UNIQUENESS`` on ``__id__`` is added instead
+              so Data Importer join validation passes without a second KEY. Node files whose
               source ``Neo4jNode.embedding_properties`` contain one or more keys also include
               an ``indexes`` list: one ``VECTOR`` entry per embedding property
               (``properties``: ``[name]``, ``dimensions``: inferred from the first non-empty
@@ -425,7 +430,7 @@ class ParquetWriter(KGWriter):
                 pk_names = (
                     meta.primary_key_property_names
                     if meta.primary_key_property_names
-                    else [INTERNAL_ID_PROPERTY]
+                    else [NODE_INTERNAL_ID_PROPERTY]
                 )
                 uq_names = meta.uniqueness_property_names or []
                 columns = _build_columns_from_schema(
@@ -474,7 +479,7 @@ class ParquetWriter(KGWriter):
                 end_node_source = meta.relationship_tail or ""
                 columns = _build_columns_from_schema(
                     meta.schema,
-                    ["from", "to"],
+                    [RELATIONSHIP_FROM_ID_PROPERTY, RELATIONSHIP_TO_ID_PROPERTY],
                     [],
                 )
                 rel_name = (
@@ -509,13 +514,13 @@ class ParquetWriter(KGWriter):
                     "start_node_primary_keys": (
                         meta.head_primary_key_property_names
                         if meta.head_primary_key_property_names
-                        else [INTERNAL_ID_PROPERTY]
+                        else [NODE_INTERNAL_ID_PROPERTY]
                     ),
                     "end_node_source": end_node_source,
                     "end_node_primary_keys": (
                         meta.tail_primary_key_property_names
                         if meta.tail_primary_key_property_names
-                        else [INTERNAL_ID_PROPERTY]
+                        else [NODE_INTERNAL_ID_PROPERTY]
                     ),
                 }
                 if rel_constraints_meta:

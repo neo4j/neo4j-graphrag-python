@@ -138,6 +138,8 @@ async def test_pipeline_builder_happy_path(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.async_embed_query.return_value = [1, 2, 3]
+    embedder.embedding_model_name = ""
+
     llm.ainvoke.side_effect = [
         LLMResponse(
             content="""{
@@ -305,6 +307,7 @@ async def test_pipeline_builder_failing_chunk_raise(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.async_embed_query.return_value = [1, 2, 3]
+    embedder.embedding_model_name = ""
     llm.ainvoke.side_effect = [
         LLMResponse(
             content="""{
@@ -383,6 +386,7 @@ async def test_pipeline_builder_failing_chunk_do_not_raise(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.async_embed_query.return_value = [1, 2, 3]
+    embedder.embedding_model_name = ""
     llm.ainvoke.side_effect = [
         LLMResponse(content="invalid json"),
         LLMResponse(
@@ -509,6 +513,7 @@ async def test_pipeline_builder_two_documents(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.async_embed_query.return_value = [1, 2, 3]
+    embedder.embedding_model_name = ""
     llm.ainvoke.side_effect = [
         LLMResponse(
             content="""{

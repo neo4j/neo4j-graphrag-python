@@ -59,6 +59,7 @@ class TextChunkEmbedder(Component):
         embedding = self._embedder.embed_query(text_chunk.text)
         metadata = text_chunk.metadata if text_chunk.metadata else {}
         metadata["embedding"] = embedding
+        metadata["embedding_model_name"] = self._embedder.embedding_model_name
         return TextChunk(
             text=text_chunk.text,
             index=text_chunk.index,
@@ -83,6 +84,7 @@ class TextChunkEmbedder(Component):
             embedding = await self._embedder.async_embed_query(text_chunk.text)
             metadata = text_chunk.metadata if text_chunk.metadata else {}
             metadata["embedding"] = embedding
+            metadata["embedding_model_name"] = self._embedder.embedding_model_name
             return TextChunk(
                 text=text_chunk.text,
                 index=text_chunk.index,

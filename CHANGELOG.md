@@ -6,15 +6,36 @@
 
 - (**breaking**) `GeminiLLM`'s default model is now `gemini-3.8-flash`. The previous default, `gemini-2.0-flash`, was shut down by Google on 2026-06-01, so `GeminiLLM()` with no explicit model failed. Callers relying on the old default will now reach a different model; pass `model_name` explicitly to pin one.
 - (**breaking**) `VertexAILLM`'s default model is now `gemini-3.8-flash`. The previous default, `gemini-2.5-flash`, was retired on Vertex AI on 2026-10-20. Callers relying on the old default will now reach a different model; pass `model_name` explicitly to pin one.
+- Changed internal column names in ParquetFormatter to avoid collisions with real properties.
+
+## 1.24.0
+
+### Added
+
+- Minimal examples of the new dataflow pipeline (`neo4j_graphrag.pipeline.Pipeline`) in `examples/pipeline/`, showing modularity, stage configuration, error handling and composition of knowledge-graph components.
+- Embedders now have a `embedding_model_name` property that defaults to an empty string and must be implemented for subclasses for the real model name to be properly saved in the database.
+- Chunk node metadata now contains `embedding_model_name` which is saved as a new property on Chunk nodes in Neo4j.
+
+### Fixed
+
+- Fixed `supports_search_clause` to correctly identify Aura 5.27.0 as SEARCH-capable. Aura pins `dbms.components()` to `5.27.0` regardless of the underlying engine, so only an exact version match is used (previously a `>= 5.27.0` check incorrectly matched year-based Aura strings like `2025.x`). Closes #601.
+
+
+## 1.23.0
+
+### Changed
+
 - `SchemaExtractionTemplate` now tells the model to define each node type once. A node label is global and carries one property and constraint set.
 - Lockfile now uses CPU-only PyTorch wheels by default: the `sentence-transformers` and `examples` extras resolve `torch` from PyTorch's CPU index instead of PyPI (which on linux x86_64 pulls a ~900MB CUDA wheel plus the ~15-package `nvidia-*-cu12` closure the repo never uses). A new `gpu` extra resolves CUDA torch (`cu126`) instead, for `SentenceTransformerEmbeddings` on GPU. `--all-extras` therefore needs `--no-extra gpu` (CI workflows, tox and docs updated).
 
 ### Fixed
 
+- Parquet export no longer appends synthetic `KEY(__id__)` when a label already has a semantic KEY (including composite-only KEYs). `__id__` is still written as a normal column and still used for relationship `from`/`to` when there is no single-property KEY; `KEY(__id__)` is emitted only for keyless labels. When joins use `__id__` under a semantic KEY, export metadata adds `UNIQUENESS(__id__)` instead so Data Importer node-reference validation (DANG-023) passes without a second KEY (Neo4j 22N41 on re-import).
 - Fixed `Neo4jWriter` ignoring `neo4j_database` during setup and cleanup, ensuring the temporary-ID index is created and temporary IDs are removed in the configured database.
 - Parquet writes no longer fail when a `LIST` property mixes element types across rows or inside one list (for example `["1998"]` and `[1998]`). `Neo4jGraphParquetFormatter._normalize_column_types` stringifies those elements. Uniform lists and int/float lists are left unchanged, so numeric lists still promote to `list<float32>`. Node and relationship files share this path.
 - Experimental: LLM-auto-generated schemas now reconcile duplicate `node_types` (entries sharing the same label) by merging them into a single type that carries the union of their properties, emitting a warning log. Direct `GraphSchema` construction rejects remaining duplicate node labels with a clear error instead of a last-write-wins index that could report an undefined constraint property. This reflects that Neo4j node labels are global per name.
 - LLM-extracted schemas (`SchemaFromTextExtractor` with or without structured output, `GraphSchema.from_extraction_output` and `validate_extraction_dict_to_graph_schema`) no longer fail with `SchemaValidationError` when the model emits an `EXISTENCE` constraint on a property already covered by a `KEY`, or a `UNIQUENESS` constraint on the same properties as a `KEY`. The redundant constraint is dropped with an info log, since a `KEY` already implies existence and uniqueness. Direct `GraphSchema` construction still rejects these combinations.
+- Fixed a bug where `VectorCypherRetriever.search` would fail with `        "Vector Search with filters requires: node_label, embedding_node_property, embedding_dimension"` exception.
 
 ## 1.22.0
 

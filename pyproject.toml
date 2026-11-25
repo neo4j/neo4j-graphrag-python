@@ -15,7 +15,7 @@
 
 [project]
 name = "neo4j-graphrag"
-version = "1.22.0"
+version = "1.24.0"
 description = "Python package to allow easy integration to Neo4j's GraphRAG features"
 authors = [
     {name = "Neo4j, Inc", email = "team-gen-ai@neo4j.com"}
@@ -45,14 +45,14 @@ Repository = "https://github.com/neo4j/neo4j-graphrag-python"
 [project.optional-dependencies]
 weaviate = ["weaviate-client>=4.6.1,<5.0.0"]
 pinecone = ["pinecone-client>=4.1.0,<5.0.0"]
-google = ["google-cloud-aiplatform>=1.66.0,<2.0.0"]
+google = ["google-cloud-aiplatform>=1.66.0,<3.0.0"]
 google-genai = ["google-genai>=1.62.0,<3.0.0"]
 cohere = ["cohere>=5.9.0,<6.0.0"]
 anthropic = ["anthropic>=0.77.0,<2.0.0"]
 bedrock = ["boto3>=1.35.0,<2.0.0"]
 ollama = ["ollama>=0.6.3,<0.7.0"]
 openai = ["openai>=1.51.1,<4.0.0"]
-mistralai = ["mistralai>=2.7.1,<3.0.0"]
+mistralai = ["mistralai>=2.7.1,<4.0.0"]
 litellm = ["litellm>=1.101.0,<2.0.0"]
 qdrant = ["qdrant-client>=1.11.3,<2.0.0"]
 kg_creation_tools = ["neo4j-viz>=0.7.0,<0.8.0"]
@@ -88,19 +88,19 @@ examples = [
 # NOTE: spaCy currently has a Python 3.14 import-time failure via its pydantic v1 path
 # (see https://github.com/explosion/spaCy/issues/13895). Until upstream resolves this,
 # only advertise/install the `nlp` extra on Python <3.14.
-nlp = ["spacy==3.8.16; python_version < '3.14'"]
+nlp = ["spacy==3.8.18; python_version < '3.14'"]
 fuzzy-matching = ["rapidfuzz>=3.12.2,<4.0.0"]
 
 [dependency-groups]
 dev = [
     "urllib3<3",
     "ruff>=0.3.0,<0.18.0",
-    "mypy>=1.10.0,<2.0.0",
-    "pytest>=9.0.3,<9.2.0",
+    "mypy>=1.10.0,<2.5.0",
+    "pytest>=9.0.3,<9.3.0",
     "coverage>=7.4.3,<8.0.0",
     "pytest-asyncio>=1.0.0,<2.0.0",
-    "pre-commit>=3.6.2,<4.0.0; python_version >= '3.9'",
-    "sphinx>=7.2.6,<8.0.0; python_version >= '3.9'",
+    "pre-commit>=3.6.2,<4.8.0; python_version >= '3.9'",
+    "sphinx>=7.2.6,<9.0.0; python_version >= '3.9'",
     "enum-tools[sphinx]>=0.12.0,<0.14.0",
     "pytest-rerunfailures>=16.0,<17.0",
 ]
@@ -109,6 +109,7 @@ dev = [
 # Keep in sync with `minimumReleaseAge` in renovate.json: if Renovate proposes
 # a release younger than this window, it cannot update uv.lock.
 exclude-newer = "1 week"
+exclude-newer-package = { certifi = false }
 # `gpu` provides CUDA torch where the torch-carrying extras provide CPU
 # torch; the two must never be resolved into the same environment, so the
 # extras are declared mutually exclusive. This is what lets the lockfile

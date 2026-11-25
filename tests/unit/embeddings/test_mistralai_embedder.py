@@ -143,3 +143,10 @@ def test_mistralai_embedder_rate_limit_error_eventual_success(
     assert result == [1.0, 2.0]
     # Verify the API was called 3 times before succeeding
     assert mock_embeddings.call_count == 3
+
+
+@patch("neo4j_graphrag.embeddings.mistral.Mistral")
+def test_mistralai_embedding_model_name_is_string(mock_mistral: Mock) -> None:
+    embedder = MistralAIEmbeddings()
+    assert isinstance(embedder.embedding_model_name, str)
+    assert embedder.embedding_model_name == "mistral-embed"

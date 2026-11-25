@@ -44,3 +44,10 @@ def test_ollama_embedder_empty_list(mock_import: Mock) -> None:
     embedder = OllamaEmbeddings(model="test")
     with pytest.raises(EmbeddingsGenerationError):
         embedder.embed_query("my text")
+
+
+@patch("builtins.__import__")
+def test_ollama_embedding_model_name_is_string(mock_import: Mock) -> None:
+    embedder = OllamaEmbeddings(model="test")
+    assert isinstance(embedder.embedding_model_name, str)
+    assert embedder.embedding_model_name == "test"

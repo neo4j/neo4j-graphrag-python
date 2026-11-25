@@ -89,6 +89,7 @@ async def test_pipeline_builder_happy_path_legacy_schema(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.async_embed_query.return_value = [1, 2, 3]
+    embedder.embedding_model_name = ""
     llm.ainvoke.side_effect = [
         LLMResponse(
             content=llm_json_response_3_nodes_2_relationships,
@@ -152,6 +153,7 @@ async def test_pipeline_builder_happy_path(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.async_embed_query.return_value = [1, 2, 3]
+    embedder.embedding_model_name = ""
     llm.ainvoke.side_effect = [
         LLMResponse(
             content=llm_json_response_3_nodes_2_relationships,
@@ -214,6 +216,7 @@ async def test_pipeline_builder_two_documents(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.async_embed_query.return_value = [1, 2, 3]
+    embedder.embedding_model_name = ""
     llm.ainvoke.side_effect = [
         # first document
         # first chunk
@@ -296,6 +299,7 @@ async def test_pipeline_builder_same_document_two_runs(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.async_embed_query.return_value = [1, 2, 3]
+    embedder.embedding_model_name = ""
     llm.ainvoke.side_effect = [
         # first run
         # first chunk
@@ -377,6 +381,7 @@ async def test_pipeline_builder_with_automatic_schema_extraction(
     """
     driver.execute_query("MATCH (n) DETACH DELETE n")
     embedder.async_embed_query.return_value = [1, 2, 3]
+    embedder.embedding_model_name = ""
 
     # set up mock LLM responses for both schema extraction and entity extraction
     llm.ainvoke.side_effect = [

@@ -79,6 +79,10 @@ class BaseOpenAIEmbeddings(Embedder, abc.ABC):
                 f"Failed to generate embedding with OpenAI: {e}"
             ) from e
 
+    @property
+    def embedding_model_name(self) -> str:
+        return self.model
+
 
 class OpenAIEmbeddings(BaseOpenAIEmbeddings):
     """

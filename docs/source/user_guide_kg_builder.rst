@@ -420,7 +420,7 @@ The same principles apply to `embedder_config`:
         "embedder_config": {
             "class_": "OpenAIEmbeddings",
             "params_": {
-                "mode": "text-embedding-ada-002",
+                "model": "text-embedding-ada-002",
                 "api_key": {
                     "resolver_": "ENV",
                     "var_": "OPENAI_API_KEY",
@@ -712,7 +712,10 @@ Example usage:
 If OpenAI is not an option, see :ref:`embedders` to learn how to use other supported embedders.
 
 The embeddings are added to each chunk metadata, and will be saved as a Chunk node property in the graph if
-`create_lexical_graph` is enabled in the `EntityRelationExtractor` (keep reading).
+`create_lexical_graph` is enabled in the `EntityRelationExtractor` (keep reading). Similarly, the
+`embedding_model_name` property defined by the `Embedder` class will be added as a chunk property so that
+it's always clear which model was used to embed each chunk. If embeddings need to be updated (eg. after a
+model deprecation), remember to also update this `embedding_model_name` property.
 
 .. _lexical-graph-builder:
 
@@ -732,7 +735,7 @@ Example usage:
 
 .. code:: python
 
-    from neo4j_graphrag.components.lexical_graph_builder import LexicalGraphBuilder
+    from neo4j_graphrag.components.lexical_graph import LexicalGraphBuilder
     from neo4j_graphrag.components.types import LexicalGraphConfig
 
     lexical_graph_builder = LexicalGraphBuilder(config=LexicalGraphConfig())

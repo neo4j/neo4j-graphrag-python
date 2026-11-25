@@ -75,3 +75,10 @@ def test_embed_query_non_retryable_error_handling(mock_import: Mock) -> None:
 
     # Verify the model was called only once (no retries for non-rate-limit errors)
     assert mock_model.encode.call_count == 1
+
+
+@patch("builtins.__import__")
+def test_embedding_model_name_is_tring(mock_import: Mock) -> None:
+    instance = SentenceTransformerEmbeddings(model="paraphrase-MiniLM-L3-v2 ")
+    assert isinstance(instance.embedding_model_name, str)
+    assert instance.embedding_model_name == "paraphrase-MiniLM-L3-v2 "
