@@ -83,6 +83,13 @@ def test_invalid_chunk_overlap() -> None:
     assert "chunk_overlap must be strictly less than chunk_size" in str(excinfo)
 
 
+@pytest.mark.parametrize("chunk_overlap", [-1, -5])
+def test_negative_chunk_overlap_rejected(chunk_overlap: int) -> None:
+    # A negative overlap makes the step larger than the chunk and drops text.
+    with pytest.raises(ValueError, match="chunk_overlap must be non-negative"):
+        FixedSizeSplitter(chunk_size=5, chunk_overlap=chunk_overlap, approximate=False)
+
+
 def test_invalid_chunk_size() -> None:
     with pytest.raises(ValueError) as excinfo:
         FixedSizeSplitter(0, 0)
