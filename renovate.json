@@ -35,7 +35,8 @@
       ],
       "matchDepTypes": [
         "dependency-groups",
-        "project.dependencies"
+        "project.dependencies",
+        "project.optional-dependencies"
       ],
       "rangeStrategy": "widen"
     },
@@ -59,7 +60,8 @@
         "pep621"
       ],
       "matchDepTypes": [
-        "project.dependencies"
+        "project.dependencies",
+        "project.optional-dependencies"
       ],
       "automerge": true,
       "automergeType": "pr",
