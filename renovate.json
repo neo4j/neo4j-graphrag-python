@@ -15,6 +15,16 @@
     "enabled": true,
     "schedule": [
       "before 9am on monday"
+    ],
+    "automerge": true,
+    "automergeType": "pr"
+  },
+  "vulnerabilityAlerts": {
+    "automerge": true,
+    "automergeType": "pr",
+    "labels": [
+      "dependencies",
+      "security"
     ]
   },
   "packageRules": [
