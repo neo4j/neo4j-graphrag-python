@@ -19,6 +19,10 @@
 - Fixed `supports_search_clause` to correctly identify Aura 5.27.0 as SEARCH-capable. Aura pins `dbms.components()` to `5.27.0` regardless of the underlying engine, so only an exact version match is used (previously a `>= 5.27.0` check incorrectly matched year-based Aura strings like `2025.x`). Closes #601.
 
 
+### Fixed
+
+- `OllamaLLM.ainvoke` no longer wraps `model_params` in a second `options` key, so `options` (e.g. `temperature`) and other chat arguments (`format`, `keep_alive`) now reach Ollama as in `invoke`.
+
 ## 1.23.0
 
 ### Changed

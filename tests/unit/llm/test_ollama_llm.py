@@ -773,3 +773,34 @@ async def test_ollama_llm_aclose(mock_import: Mock) -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         await llm.aclose()
+
+
+@pytest.mark.asyncio
+@patch("builtins.__import__")
+async def test_ollama_llm_ainvoke_does_not_nest_options(mock_import: Mock) -> None:
+    """ainvoke must pass the same chat() arguments as invoke (no options={'options': ...})."""
+    mock_ollama = get_mock_ollama()
+    mock_import.return_value = mock_ollama
+    mock_ollama.Message = MagicMock()
+    sync_chat = MagicMock(return_value=MagicMock(message=MagicMock(content="ok")))
+    async_chat = MagicMock(
+        side_effect=lambda *_a, **_k: _async_result(
+            MagicMock(message=MagicMock(content="ok"))
+        )
+    )
+    mock_ollama.Client.return_value.chat = sync_chat
+    mock_ollama.AsyncClient.return_value.chat = async_chat
+
+    options = {"temperature": 0.3}
+    llm = OllamaLLM("gpt", model_params={"options": options})
+    messages: list[LLMMessage] = [{"role": "user", "content": "hi"}]
+
+    await llm.ainvoke("hi")
+    await llm.ainvoke(messages)
+
+    for call in async_chat.call_args_list:
+        assert call.kwargs["options"] == options
+
+
+async def _async_result(value: Any) -> Any:
+    return value
