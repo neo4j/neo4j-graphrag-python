@@ -91,7 +91,7 @@ class BaseGeminiLLM(LLMBase, abc.ABC):
 
     def __init__(
         self,
-        model_name: str = "gemini-2.0-flash",
+        model_name: str = "gemini-3.8-flash",
         model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
         **kwargs: Any,
@@ -519,7 +519,7 @@ class GeminiLLM(BaseGeminiLLM):
     """LLM interface for Google Gemini via the google.genai SDK.
 
     Args:
-        model_name (str): Model name. Defaults to "gemini-2.0-flash".
+        model_name (str): Model name. Defaults to "gemini-3.8-flash".
         model_params (Optional[dict]): Additional parameters passed to the model.
         rate_limit_handler (Optional[RateLimitHandler]): Handler for rate limiting.
         base_url (Optional[str], optional): Base URL to use instead of Google's default
@@ -534,7 +534,7 @@ class GeminiLLM(BaseGeminiLLM):
 
     def __init__(
         self,
-        model_name: str = "gemini-2.0-flash",
+        model_name: str = "gemini-3.8-flash",
         model_params: Optional[dict[str, Any]] = None,
         rate_limit_handler: Optional[RateLimitHandler] = None,
         base_url: Optional[str] = None,

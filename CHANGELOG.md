@@ -4,6 +4,8 @@
 
 ### Changed
 
+- (**breaking**) `GeminiLLM`'s default model is now `gemini-3.8-flash`. The previous default, `gemini-2.0-flash`, was shut down by Google on 2026-06-01, so `GeminiLLM()` with no explicit model failed. Callers relying on the old default will now reach a different model; pass `model_name` explicitly to pin one.
+- (**breaking**) `VertexAILLM`'s default model is now `gemini-3.8-flash`. The previous default, `gemini-2.5-flash`, was retired on Vertex AI on 2026-10-20. Callers relying on the old default will now reach a different model; pass `model_name` explicitly to pin one.
 - Changed internal column names in ParquetFormatter to avoid collisions with real properties.
 
 ## 1.24.0
