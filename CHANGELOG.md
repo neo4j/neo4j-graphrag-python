@@ -16,8 +16,8 @@
 
 ### Fixed
 
+- `BedrockLLM` and `GeminiLLM` `invoke_with_tools` / `ainvoke_with_tools` now go through the rate limit handler, like `invoke` / `ainvoke`, so a 429 or throttling response is retried instead of failing immediately. `VertexAILLM`'s tool methods go through the handler as well, for parity with its `invoke` / `ainvoke`.
 - Fixed `supports_search_clause` to correctly identify Aura 5.27.0 as SEARCH-capable. Aura pins `dbms.components()` to `5.27.0` regardless of the underlying engine, so only an exact version match is used (previously a `>= 5.27.0` check incorrectly matched year-based Aura strings like `2025.x`). Closes #601.
-
 
 ## 1.23.0
 
