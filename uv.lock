@@ -845,7 +845,7 @@ wheels = [
 
 [[package]]
 name = "cohere"
-version = "5.21.1"
+version = "7.3.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastavro", version = "1.12.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -858,9 +858,9 @@ dependencies = [
     { name = "types-requests" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d2/75/4c346f6e2322e545f8452692304bd4eca15a2a0209ab9af6a0d1a7810b67/cohere-5.21.1.tar.gz", hash = "sha256:e5ade4423b928b01ff2038980e1b62b2a5bb412c8ab83e30882753b810a5509f", size = 191272, upload-time = "2026-03-26T15:09:27.857Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/28/4b/82434cb3c221b6be27c582cd636486b1be5c6f6fbc79a66eb6e366ead8ee/cohere-7.3.2.tar.gz", hash = "sha256:b75e17dff0d5d65fe9af80e86292f2f7081018d00b1bdddf3d13aa046836fe64", size = 222617, upload-time = "2026-11-19T15:32:00.477Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/0a/50/5538f02ec6d10fbb84f29c1b18c68ff2a03d7877926a80275efdf8755a9f/cohere-5.21.1-py3-none-any.whl", hash = "sha256:f15592ec60d8cf12f01563db94ec28c388c61269d9617f23c2d6d910e505344e", size = 334262, upload-time = "2026-03-26T15:09:26.284Z" },
+    { url = "https://files.pythonhosted.org/packages/90/8b/3b60e8991765e02af8fb3e7c75cc6ec3c1b324891876d12036b4c2c3e935/cohere-7.3.2-py3-none-any.whl", hash = "sha256:606efe69b318f6b0b841a20e947fd9615946b3e56c1152e7a9036b3146a0f32d", size = 376321, upload-time = "2026-11-19T15:31:58.832Z" },
 ]
 
 [[package]]
@@ -4475,7 +4475,7 @@ dev = [
 requires-dist = [
     { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.77.0,<2.0.0" },
     { name = "boto3", marker = "extra == 'bedrock'", specifier = ">=1.35.0,<2.0.0" },
-    { name = "cohere", marker = "extra == 'cohere'", specifier = ">=5.9.0,<6.0.0" },
+    { name = "cohere", marker = "extra == 'cohere'", specifier = ">=5.9.0,<7.4.0" },
     { name = "fsspec", specifier = ">=2024.12.0,<2027.0.0" },
     { name = "google-cloud-aiplatform", marker = "extra == 'google'", specifier = ">=1.66.0,<3.0.0" },
     { name = "google-genai", marker = "extra == 'google-genai'", specifier = ">=1.62.0,<3.0.0" },
