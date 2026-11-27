@@ -63,7 +63,7 @@ class CohereLLM(LLMBase):
 
     Args:
         model_name (str, optional): Name of the LLM to use. Defaults to "".
-        model_params (Optional[dict], optional): Additional parameters for LLMInterface(V1) passed to the model when text is sent to it. Defaults to None.
+        model_params (Optional[dict], optional): Additional parameters forwarded to Cohere chat calls through both LLMInterface V1 and V2. Defaults to None.
         system_instruction (Optional[str], optional): Additional instructions for setting the behavior and context for the model in a conversation. Defaults to None.
         rate_limit_handler (Optional[RateLimitHandler], optional): A rate limit handler for LLMInterface(V1) to manage API rate limits. Defaults to None.
         **kwargs (Any): Arguments passed to the model when for the class is initialised. Defaults to None.
@@ -178,6 +178,7 @@ class CohereLLM(LLMBase):
             res = self.client.chat(
                 messages=messages,
                 model=self.model_name,
+                **self.model_params,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
@@ -229,6 +230,7 @@ class CohereLLM(LLMBase):
             res = self.client.chat(
                 messages=messages,
                 model=self.model_name,
+                **self.model_params,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError("Error calling cohere") from e
@@ -286,6 +288,7 @@ class CohereLLM(LLMBase):
             res = await self.async_client.chat(
                 messages=messages,
                 model=self.model_name,
+                **self.model_params,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError(e)
@@ -328,6 +331,7 @@ class CohereLLM(LLMBase):
             res = await self.async_client.chat(
                 messages=messages,
                 model=self.model_name,
+                **self.model_params,
             )
         except self.cohere_api_error as e:
             raise LLMGenerationError("Error calling cohere") from e
